@@ -220,7 +220,7 @@ class UIController {
         } = data;
         
         document.getElementById('pixelDimensionsDisplay').textContent = 
-            `${pixelWidthMM.toFixed(3)} × ${pixelHeightMM.toFixed(3)}`;
+            `${pixelWidthMM.toFixed(3)} × ${pixelHeightMM.toFixed(3)} мм`;
         document.getElementById('gridSize').textContent = `${gridWidth}×${gridHeight}`;
         document.getElementById('totalPixels').textContent = filledBeads.toLocaleString('ru-RU');
         document.getElementById('workspaceSize').textContent = 

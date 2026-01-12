@@ -23,10 +23,6 @@
 
                     <div class="control-group">
                         <div class="slider-section">
-                            <div class="density-info">
-                                <div class="density-display" id="pixelDimensionsDisplay">1.0 × 1.0</div>
-                                <div class="density-label">размер бисеринки (мм)</div>
-                            </div>
                             <div class="input-wrapper">
                                 <label class="input-label">Ширина бисеринки (мм)</label>
                                 <input type="number" id="pixelWidthInput" class="dimension-input" min="0.1" max="50"
@@ -168,9 +164,13 @@
                 <div class="stats-overlay">
                     <div class="stats">
                         <div class="stat-row">
+                            <span class="stat-label">Размер бисеринки</span>
+                            <span class="stat-value" id="pixelDimensionsDisplay">3.125 × 3.125 мм</span>
+            </div>
+                        <div class="stat-row">
                             <span class="stat-label">Сетка</span>
                             <span class="stat-value" id="gridSize">32×32</span>
-            </div>
+                        </div>
                         <div class="stat-row">
                             <span class="stat-label">Бисеринок в узоре</span>
                             <span class="stat-value" id="totalPixels">0</span>
