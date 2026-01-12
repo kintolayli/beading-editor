@@ -905,7 +905,7 @@ class PixelGridDemo {
             }
 
             const projectData = {
-                version: '1.0',
+                version: '1.0.0',
                 workspaceWidthMM: this.workspaceWidthMM,
                 workspaceHeightMM: this.workspaceHeightMM,
                 pixelWidthMM: this.pixelWidthMM,

@@ -501,6 +501,10 @@ input[type="range"]::-moz-range-track {
     gap: 0.5rem;
 }
 
+.project-section {
+    margin-bottom: 1rem;
+}
+
 .upload-button {
     display: flex;
     align-items: center;

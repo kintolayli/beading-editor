@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Бисерный редактор</title>
+    <title>Beading Studio v1.0.0</title>
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap"
         rel="stylesheet">
@@ -17,9 +17,29 @@
             <div class="controls">
                 <div class="controls-inner">
                     <header class="sidebar-header">
-                        <h1>Бисерный редактор</h1>
+                        <h1>Beading Studio</h1>
                         <p class="subtitle">Создание схем для бисероплетения</p>
                     </header>
+
+                    <div class="project-section">
+                        <button id="saveProjectBtn" class="upload-button">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 14H14M4 4V2C4 1.44772 4.44772 1 5 1H11C11.5523 1 12 1.44772 12 2V4M4 4H2C1.44772 4 1 4.44772 1 5V13C1 13.5523 1.44772 14 2 14M4 4H12M12 4H14C14.5523 4 15 4.44772 15 5V13C15 13.5523 14.5523 14 14 14M8 7V11M8 7L6 9M8 7L10 9" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Сохранить проект
+                        </button>
+                        <label for="loadProjectBtn" class="upload-button">
+                            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
+                                xmlns="http://www.w3.org/2000/svg">
+                                <path d="M2 14H14M4 4V2C4 1.44772 4.44772 1 5 1H11C11.5523 1 12 1.44772 12 2V4M4 4H2C1.44772 4 1 4.44772 1 5V13C1 13.5523 1.44772 14 2 14M4 4H12M12 4H14C14.5523 4 15 4.44772 15 5V13C15 13.5523 14.5523 14 14 14M8 5V9M8 9L6 7M8 9L10 7" stroke="currentColor" stroke-width="1.5"
+                                    stroke-linecap="round" stroke-linejoin="round" />
+                            </svg>
+                            Загрузить проект
+                        </label>
+                        <input type="file" id="loadProjectBtn" accept=".beading,.json" style="display: none;">
+                    </div>
 
                     <div class="control-group">
                         <div class="slider-section">
@@ -161,26 +181,6 @@
                             <input type="file" id="fileUpload" accept=".svg,.dxf" style="display: none;">
                             <div class="upload-info" id="uploadInfo">SVG или DXF формат</div>
                             </div>
-                        
-                        <div class="project-section">
-                            <button id="saveProjectBtn" class="upload-button">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2 14H14M4 4V2C4 1.44772 4.44772 1 5 1H11C11.5523 1 12 1.44772 12 2V4M4 4H2C1.44772 4 1 4.44772 1 5V13C1 13.5523 1.44772 14 2 14M4 4H12M12 4H14C14.5523 4 15 4.44772 15 5V13C15 13.5523 14.5523 14 14 14M8 7V11M8 7L6 9M8 7L10 9" stroke="currentColor" stroke-width="1.5"
-                                        stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                                Сохранить проект
-                            </button>
-                            <label for="loadProjectBtn" class="upload-button">
-                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"
-                                    xmlns="http://www.w3.org/2000/svg">
-                                    <path d="M2 14H14M4 4V2C4 1.44772 4.44772 1 5 1H11C11.5523 1 12 1.44772 12 2V4M4 4H2C1.44772 4 1 4.44772 1 5V13C1 13.5523 1.44772 14 2 14M4 4H12M12 4H14C14.5523 4 15 4.44772 15 5V13C15 13.5523 14.5523 14 14 14M8 5V9M8 9L6 7M8 9L10 7" stroke="currentColor" stroke-width="1.5"
-                                        stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                                Загрузить проект
-                            </label>
-                            <input type="file" id="loadProjectBtn" accept=".beading,.json" style="display: none;">
-                        </div>
                     </div>
                 </div>
             </div>
