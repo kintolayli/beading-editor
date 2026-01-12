@@ -2,6 +2,7 @@
     "name": "beading-studio",
     "version": "1.0.0",
     "description": "Редактор схем для бисероплетения",
+    "autor": "Lotnik Ilya https://github.com/kintolayli",
     "main": "electron-main.js",
     "scripts": {
         "start": "electron .",
