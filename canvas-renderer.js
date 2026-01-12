@@ -215,15 +215,15 @@ class CanvasRenderer {
                             fileX = (workspaceX - offsetX) / scaleX;
                             fileY = (workspaceY - offsetY) / scaleY;
                             
-                            // Пропускаем точки вне файла
-                            if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
-                                continue;
-                            }
+                            // НЕ пропускаем точки вне файла - originalDrawing сам обработает масштабирование
+                            // При масштабировании > 1 координаты могут выходить за [0, 1], но originalDrawing
+                            // правильно преобразует их обратно к исходному масштабу
                         }
                         
                         totalPoints++;
                         
                         // Проверяем, заполнена ли точка (используем координаты файла)
+                        // originalDrawing сам обработает масштабирование и вернет false для точек вне исходной формы
                         const isFilled = originalDrawing(fileX, fileY);
                         if (isFilled) {
                             filledPoints++;
@@ -424,6 +424,7 @@ class CanvasRenderer {
         
         contour.forEach((point, index) => {
             // Координаты точки в нормализованных координатах файла [0, 1]
+            // При масштабировании контур может выходить за границы - это нормально
             let fileX = point.x;
             let fileY = point.y;
             
@@ -437,6 +438,7 @@ class CanvasRenderer {
             }
             
             // Преобразуем в экранные координаты
+            // Не обрезаем координаты - пусть контур выходит за границы canvas
             const x = workspaceX * canvasWidth;
             const y = workspaceY * canvasHeight;
             

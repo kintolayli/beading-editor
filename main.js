@@ -454,7 +454,8 @@ class PixelGridDemo {
             const origX = centerX + dx / this.scale;
             const origY = centerY + dy / this.scale;
 
-            // Проверяем границы
+            // Проверяем границы исходного файла [0, 1]
+            // Если координаты вне границ, возвращаем false (точка вне исходной формы)
             if (origX < 0 || origX > 1 || origY < 0 || origY > 1) {
                 return false;
             }
