@@ -152,6 +152,23 @@ h1 {
     max-height: 100%;
 }
 
+.stats-overlay {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 10;
+    pointer-events: none;
+}
+
+.stats-overlay .stats {
+    background: rgba(10, 14, 23, 0.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(0, 255, 157, 0.2);
+    border-radius: 8px;
+    padding: 0.75rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
 .controls {
     background: var(--bg-secondary);
     border-radius: 0;

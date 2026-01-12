@@ -79,7 +79,7 @@
                                     <span>Brick</span>
                                 </button>
                             </div>
-                        </div>
+                            </div>
 
                         <div class="grid-offset-section">
                             <label class="slider-label">Смещение сетки</label>
@@ -98,21 +98,6 @@
                                     <input type="range" id="gridOffsetYSlider" class="dimension-slider"
                                         min="-10" max="10" value="0" step="0.1">
                                 </div>
-                            </div>
-                        </div>
-
-                        <div class="stats">
-                            <div class="stat-row">
-                                <span class="stat-label">Сетка</span>
-                                <span class="stat-value" id="gridSize">32×32</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Бисеринок в узоре</span>
-                                <span class="stat-value" id="totalPixels">0</span>
-                            </div>
-                            <div class="stat-row">
-                                <span class="stat-label">Рабочая область</span>
-                                <span class="stat-value" id="workspaceSize">150×150 мм</span>
                             </div>
                         </div>
 
@@ -179,6 +164,22 @@
             <div class="canvas-wrapper">
                 <div class="canvas-container">
                     <canvas id="canvas"></canvas>
+                </div>
+                <div class="stats-overlay">
+                    <div class="stats">
+                        <div class="stat-row">
+                            <span class="stat-label">Сетка</span>
+                            <span class="stat-value" id="gridSize">32×32</span>
+            </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Бисеринок в узоре</span>
+                            <span class="stat-value" id="totalPixels">0</span>
+                        </div>
+                        <div class="stat-row">
+                            <span class="stat-label">Рабочая область</span>
+                            <span class="stat-value" id="workspaceSize">150×150 мм</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
