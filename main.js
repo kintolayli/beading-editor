@@ -39,6 +39,11 @@ class PixelGridDemo {
         this.originalDrawingFunction = null;
         this.contour = null;
         this.originalDrawing = null;
+        
+        // Состояние для оверлея рядов
+        this.hoveredRow = null; // Для peyote - номер столбца, для brick - номер строки
+        this.mouseX = null;
+        this.mouseY = null;
 
         // Инициализация модулей
         this.renderer = new CanvasRenderer(this.ctx);
@@ -73,9 +78,204 @@ class PixelGridDemo {
             this.setupCanvas();
             this.render();
         });
+        
+        // Обработчики событий мыши для оверлея рядов
+        this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+        this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
 
         // Первая отрисовка
         this.render();
+    }
+    
+    handleMouseMove(e) {
+        const rect = this.canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        
+        this.mouseX = x;
+        this.mouseY = y;
+        
+        // Определяем, в какой ряд попала мышь
+        const gridWidth = Math.max(1, Math.floor(this.workspaceWidthMM / this.pixelWidthMM));
+        const gridHeight = Math.max(1, Math.floor(this.workspaceHeightMM / this.pixelHeightMM));
+        
+        const canvasWidth = this.currentCanvasWidth || this.canvas.width;
+        const canvasHeight = this.currentCanvasHeight || this.canvas.height;
+        
+        const pixelWidthPx = canvasWidth / gridWidth;
+        const pixelHeightPx = canvasHeight / gridHeight;
+        
+        // Преобразуем смещение из мм в пиксели
+        const gridOffsetPxX = (this.gridOffsetX / this.workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (this.gridOffsetY / this.workspaceHeightMM) * canvasHeight;
+        
+        let rowIndex = null;
+        
+        if (this.gridType === 'peyote') {
+            // Для peyote определяем столбец (вертикальный ряд)
+            const adjustedX = x - gridOffsetPxX;
+            const col = Math.floor(adjustedX / pixelWidthPx);
+            
+            // Учитываем смещение peyote
+            if (col >= 0 && col < gridWidth) {
+                rowIndex = col;
+            }
+        } else if (this.gridType === 'brick') {
+            // Для brick определяем строку (горизонтальный ряд)
+            const adjustedY = y - gridOffsetPxY;
+            const row = Math.floor(adjustedY / pixelHeightPx);
+            
+            // Учитываем смещение brick
+            if (row >= 0 && row < gridHeight) {
+                rowIndex = row;
+            }
+        }
+        
+        if (this.hoveredRow !== rowIndex) {
+            this.hoveredRow = rowIndex;
+            this.render();
+        }
+        this.updateRowOverlayInfo();
+    }
+    
+    handleMouseLeave() {
+        this.hoveredRow = null;
+        this.mouseX = null;
+        this.mouseY = null;
+        this.render();
+        this.hideRowOverlayInfo();
+    }
+    
+    /**
+     * Подсчитывает количество бисеринок в ряду
+     */
+    countBeadsInRow(rowIndex) {
+        if (rowIndex === null || !this.originalDrawing) return 0;
+        
+        const gridWidth = Math.max(1, Math.floor(this.workspaceWidthMM / this.pixelWidthMM));
+        const gridHeight = Math.max(1, Math.floor(this.workspaceHeightMM / this.pixelHeightMM));
+        
+        const canvasWidth = this.currentCanvasWidth || this.canvas.width;
+        const canvasHeight = this.currentCanvasHeight || this.canvas.height;
+        
+        const pixelWidthPx = canvasWidth / gridWidth;
+        const pixelHeightPx = canvasHeight / gridHeight;
+        
+        const gridOffsetPxX = (this.gridOffsetX / this.workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (this.gridOffsetY / this.workspaceHeightMM) * canvasHeight;
+        
+        // Вычисляем масштаб для файла
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        let offsetX = 0.0;
+        let offsetY = 0.0;
+        
+        if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+            scaleX = this.fileWidthMM / this.workspaceWidthMM;
+            scaleY = this.fileHeightMM / this.workspaceHeightMM;
+            offsetX = (1.0 - scaleX) / 2.0;
+            offsetY = (1.0 - scaleY) / 2.0;
+        }
+        
+        let count = 0;
+        
+        if (this.gridType === 'peyote') {
+            // Для peyote проверяем все строки в столбце rowIndex
+            // В peyote нечётные столбцы смещаются вниз на половину высоты
+            const col = rowIndex;
+            const offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+            
+            for (let row = 0; row < gridHeight; row++) {
+                const x = col * pixelWidthPx + gridOffsetPxX;
+                const y = row * pixelHeightPx + offsetPxY + gridOffsetPxY;
+                
+                if (x < 0 || x >= canvasWidth || y < 0 || y >= canvasHeight) continue;
+                
+                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
+                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                
+                let fileX = workspaceX;
+                let fileY = workspaceY;
+                
+                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+                    fileX = (workspaceX - offsetX) / scaleX;
+                    fileY = (workspaceY - offsetY) / scaleY;
+                    
+                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) continue;
+                }
+                
+                if (this.originalDrawing(fileX, fileY)) {
+                    count++;
+                }
+            }
+        } else if (this.gridType === 'brick') {
+            // Для brick проверяем все столбцы в строке rowIndex
+            // В brick нечётные строки смещаются вправо на половину ширины
+            const row = rowIndex;
+            const offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+            
+            for (let col = 0; col < gridWidth; col++) {
+                const x = col * pixelWidthPx + offsetPxX + gridOffsetPxX;
+                const y = row * pixelHeightPx + gridOffsetPxY;
+                
+                if (x < 0 || x >= canvasWidth || y < 0 || y >= canvasHeight) continue;
+                
+                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
+                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                
+                let fileX = workspaceX;
+                let fileY = workspaceY;
+                
+                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+                    fileX = (workspaceX - offsetX) / scaleX;
+                    fileY = (workspaceY - offsetY) / scaleY;
+                    
+                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) continue;
+                }
+                
+                if (this.originalDrawing(fileX, fileY)) {
+                    count++;
+                }
+            }
+        }
+        
+        return count;
+    }
+    
+    updateRowOverlayInfo() {
+        if (this.hoveredRow === null) {
+            this.hideRowOverlayInfo();
+            return;
+        }
+        
+        const count = this.countBeadsInRow(this.hoveredRow);
+        const rowType = this.gridType === 'peyote' ? 'столбец' : 'строка';
+        const rowNumber = this.hoveredRow + 1; // Нумерация с 1 для пользователя
+        
+        const overlay = document.getElementById('rowOverlayInfo');
+        if (overlay) {
+            overlay.innerHTML = `
+                <div class="row-overlay-content">
+                    <div class="row-overlay-title">${rowType.toUpperCase()} ${rowNumber}</div>
+                    <div class="row-overlay-count">${count} бисеринок</div>
+                </div>
+            `;
+            overlay.style.display = 'block';
+            
+            // Позиционируем рядом с курсором
+            if (this.mouseX !== null && this.mouseY !== null) {
+                const rect = this.canvas.getBoundingClientRect();
+                overlay.style.left = (rect.left + this.mouseX + 15) + 'px';
+                overlay.style.top = (rect.top + this.mouseY - 10) + 'px';
+            }
+        }
+    }
+    
+    hideRowOverlayInfo() {
+        const overlay = document.getElementById('rowOverlayInfo');
+        if (overlay) {
+            overlay.style.display = 'none';
+        }
     }
 
     setupCanvas() {
@@ -462,7 +662,8 @@ class PixelGridDemo {
             fileHeightMM: this.fileHeightMM,
             gridType: this.gridType,
             gridOffsetX: this.gridOffsetX,
-            gridOffsetY: this.gridOffsetY
+            gridOffsetY: this.gridOffsetY,
+            hoveredRow: this.hoveredRow
         });
         
         // Обновляем статистику после рендеринга

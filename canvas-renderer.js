@@ -26,6 +26,7 @@ class CanvasRenderer {
      * @param {string} renderData.gridType - тип сетки ('square', 'peyote', 'brick')
      * @param {number} renderData.gridOffsetX - смещение сетки по X в мм
      * @param {number} renderData.gridOffsetY - смещение сетки по Y в мм
+     * @param {number|null} renderData.hoveredRow - номер выделенного ряда (для peyote - столбец, для brick - строка)
      */
     render(renderData) {
         const {
@@ -42,7 +43,8 @@ class CanvasRenderer {
             fileHeightMM,
             gridType = 'square',
             gridOffsetX = 0,
-            gridOffsetY = 0
+            gridOffsetY = 0,
+            hoveredRow = null
         } = renderData;
         
         // Очистка
@@ -72,8 +74,27 @@ class CanvasRenderer {
             fileHeightMM,
             gridType,
             gridOffsetX,
-            gridOffsetY
+            gridOffsetY,
+            hoveredRow
         });
+        
+        // Выделение ряда при наведении
+        if (hoveredRow !== null && (gridType === 'peyote' || gridType === 'brick')) {
+            this.highlightRow({
+                gridWidth,
+                gridHeight,
+                pixelWidthPx,
+                pixelHeightPx,
+                canvasWidth,
+                canvasHeight,
+                workspaceWidthMM,
+                workspaceHeightMM,
+                gridType,
+                gridOffsetX,
+                gridOffsetY,
+                hoveredRow
+            });
+        }
         
         // Отрисовка контура
         this.renderContour({
@@ -261,6 +282,68 @@ class CanvasRenderer {
         ctx.lineTo(x, y + radius);
         ctx.quadraticCurveTo(x, y, x + radius, y);
         ctx.closePath();
+    }
+    
+    /**
+     * Выделяет ряд при наведении мыши
+     * @param {Object} params - параметры отрисовки
+     */
+    highlightRow(params) {
+        const {
+            gridWidth,
+            gridHeight,
+            pixelWidthPx,
+            pixelHeightPx,
+            canvasWidth,
+            canvasHeight,
+            workspaceWidthMM,
+            workspaceHeightMM,
+            gridType,
+            gridOffsetX,
+            gridOffsetY,
+            hoveredRow
+        } = params;
+        
+        const ctx = this.ctx;
+        const gridOffsetPxX = (gridOffsetX / workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (gridOffsetY / workspaceHeightMM) * canvasHeight;
+        
+        ctx.save();
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = 'rgba(0, 212, 255, 0.4)';
+        ctx.strokeStyle = 'rgba(0, 212, 255, 0.6)';
+        ctx.lineWidth = 2;
+        
+        if (gridType === 'peyote') {
+            // Выделяем столбец (вертикальный ряд)
+            // В peyote: нечётные столбцы смещаются вниз на половину высоты
+            const col = hoveredRow;
+            const offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+            const startX = col * pixelWidthPx + gridOffsetPxX;
+            
+            // Вычисляем область выделения для всего столбца
+            const startY = gridOffsetPxY + offsetPxY;
+            const endY = gridHeight * pixelHeightPx + gridOffsetPxY + offsetPxY;
+            
+            ctx.fillRect(startX, startY, pixelWidthPx, endY - startY);
+            ctx.strokeRect(startX, startY, pixelWidthPx, endY - startY);
+            
+        } else if (gridType === 'brick') {
+            // Выделяем строку (горизонтальный ряд)
+            // В brick: нечётные строки смещаются вправо на половину ширины
+            const row = hoveredRow;
+            const offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+            const startY = row * pixelHeightPx + gridOffsetPxY;
+            
+            // Вычисляем область выделения для всей строки
+            const startX = gridOffsetPxX + offsetPxX;
+            const endX = gridWidth * pixelWidthPx + gridOffsetPxX + offsetPxX;
+            
+            ctx.fillRect(startX, startY, endX - startX, pixelHeightPx);
+            ctx.strokeRect(startX, startY, endX - startX, pixelHeightPx);
+        }
+        
+        ctx.restore();
     }
     
     /**
