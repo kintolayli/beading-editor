@@ -424,7 +424,6 @@ class CanvasRenderer {
         
         contour.forEach((point, index) => {
             // Координаты точки в нормализованных координатах файла [0, 1]
-            // При масштабировании контур может выходить за границы - это нормально
             let fileX = point.x;
             let fileY = point.y;
             
@@ -438,7 +437,6 @@ class CanvasRenderer {
             }
             
             // Преобразуем в экранные координаты
-            // Не обрезаем координаты - пусть контур выходит за границы canvas
             const x = workspaceX * canvasWidth;
             const y = workspaceY * canvasHeight;
             

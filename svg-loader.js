@@ -123,17 +123,43 @@ class SVGLoader {
      */
     extractContourFromPath(pathElement, svgWidth, svgHeight, minX, minY) {
         const points = [];
+        const BEZIER_STEPS = 20; // Количество точек для интерполяции кривых Безье
+        
+        // Функция для добавления точки в нормализованных координатах
+        const addPoint = (x, y) => {
+            points.push({ 
+                x: (x - minX) / svgWidth, 
+                y: (y - minY) / svgHeight 
+            });
+        };
+        
+        // Интерполяция кубической кривой Безье
+        const cubicBezier = (p0, p1, p2, p3, t) => {
+            const mt = 1 - t;
+            return mt * mt * mt * p0 + 3 * mt * mt * t * p1 + 3 * mt * t * t * p2 + t * t * t * p3;
+        };
+        
+        // Интерполяция квадратичной кривой Безье
+        const quadraticBezier = (p0, p1, p2, t) => {
+            const mt = 1 - t;
+            return mt * mt * p0 + 2 * mt * t * p1 + t * t * p2;
+        };
         
         if (pathElement.tagName === 'path') {
             const d = pathElement.getAttribute('d');
             if (!d) return null;
             
-            // Простой парсер path команд
+            // Парсер path команд с поддержкой всех типов
             const commands = d.match(/[MmLlHhVvCcSsQqTtAaZz][^MmLlHhVvCcSsQqTtAaZz]*/g);
             if (!commands) return null;
             
             let currentX = 0;
             let currentY = 0;
+            let startX = 0;
+            let startY = 0;
+            let lastControlX = 0;
+            let lastControlY = 0;
+            let lastCommand = '';
             
             commands.forEach(cmd => {
                 const type = cmd[0];
@@ -142,20 +168,149 @@ class SVGLoader {
                 if (type === 'M' || type === 'm') {
                     currentX = type === 'M' ? coords[0] : currentX + coords[0];
                     currentY = type === 'M' ? coords[1] : currentY + coords[1];
-                    points.push({ 
-                        x: (currentX - minX) / svgWidth, 
-                        y: (currentY - minY) / svgHeight 
-                    });
+                    startX = currentX;
+                    startY = currentY;
+                    addPoint(currentX, currentY);
                 } else if (type === 'L' || type === 'l') {
                     for (let i = 0; i < coords.length; i += 2) {
                         currentX = type === 'L' ? coords[i] : currentX + coords[i];
                         currentY = type === 'L' ? coords[i + 1] : currentY + coords[i + 1];
-                        points.push({ 
-                            x: (currentX - minX) / svgWidth, 
-                            y: (currentY - minY) / svgHeight 
-                        });
+                        addPoint(currentX, currentY);
                     }
+                } else if (type === 'H' || type === 'h') {
+                    // Горизонтальная линия
+                    for (let i = 0; i < coords.length; i++) {
+                        currentX = type === 'H' ? coords[i] : currentX + coords[i];
+                        addPoint(currentX, currentY);
+                    }
+                } else if (type === 'V' || type === 'v') {
+                    // Вертикальная линия
+                    for (let i = 0; i < coords.length; i++) {
+                        currentY = type === 'V' ? coords[i] : currentY + coords[i];
+                        addPoint(currentX, currentY);
+                    }
+                } else if (type === 'C' || type === 'c') {
+                    // Кубическая кривая Безье
+                    for (let i = 0; i < coords.length; i += 6) {
+                        const x1 = type === 'C' ? coords[i] : currentX + coords[i];
+                        const y1 = type === 'C' ? coords[i + 1] : currentY + coords[i + 1];
+                        const x2 = type === 'C' ? coords[i + 2] : currentX + coords[i + 2];
+                        const y2 = type === 'C' ? coords[i + 3] : currentY + coords[i + 3];
+                        const x3 = type === 'C' ? coords[i + 4] : currentX + coords[i + 4];
+                        const y3 = type === 'C' ? coords[i + 5] : currentY + coords[i + 5];
+                        
+                        for (let t = 1; t <= BEZIER_STEPS; t++) {
+                            const tt = t / BEZIER_STEPS;
+                            const px = cubicBezier(currentX, x1, x2, x3, tt);
+                            const py = cubicBezier(currentY, y1, y2, y3, tt);
+                            addPoint(px, py);
+                        }
+                        
+                        lastControlX = x2;
+                        lastControlY = y2;
+                        currentX = x3;
+                        currentY = y3;
+                    }
+                } else if (type === 'S' || type === 's') {
+                    // Сглаженная кубическая кривая Безье
+                    for (let i = 0; i < coords.length; i += 4) {
+                        // Первая контрольная точка - отражение предыдущей
+                        let x1 = currentX;
+                        let y1 = currentY;
+                        if (lastCommand === 'C' || lastCommand === 'c' || lastCommand === 'S' || lastCommand === 's') {
+                            x1 = 2 * currentX - lastControlX;
+                            y1 = 2 * currentY - lastControlY;
+                        }
+                        
+                        const x2 = type === 'S' ? coords[i] : currentX + coords[i];
+                        const y2 = type === 'S' ? coords[i + 1] : currentY + coords[i + 1];
+                        const x3 = type === 'S' ? coords[i + 2] : currentX + coords[i + 2];
+                        const y3 = type === 'S' ? coords[i + 3] : currentY + coords[i + 3];
+                        
+                        for (let t = 1; t <= BEZIER_STEPS; t++) {
+                            const tt = t / BEZIER_STEPS;
+                            const px = cubicBezier(currentX, x1, x2, x3, tt);
+                            const py = cubicBezier(currentY, y1, y2, y3, tt);
+                            addPoint(px, py);
+                        }
+                        
+                        lastControlX = x2;
+                        lastControlY = y2;
+                        currentX = x3;
+                        currentY = y3;
+                    }
+                } else if (type === 'Q' || type === 'q') {
+                    // Квадратичная кривая Безье
+                    for (let i = 0; i < coords.length; i += 4) {
+                        const x1 = type === 'Q' ? coords[i] : currentX + coords[i];
+                        const y1 = type === 'Q' ? coords[i + 1] : currentY + coords[i + 1];
+                        const x2 = type === 'Q' ? coords[i + 2] : currentX + coords[i + 2];
+                        const y2 = type === 'Q' ? coords[i + 3] : currentY + coords[i + 3];
+                        
+                        for (let t = 1; t <= BEZIER_STEPS; t++) {
+                            const tt = t / BEZIER_STEPS;
+                            const px = quadraticBezier(currentX, x1, x2, tt);
+                            const py = quadraticBezier(currentY, y1, y2, tt);
+                            addPoint(px, py);
+                        }
+                        
+                        lastControlX = x1;
+                        lastControlY = y1;
+                        currentX = x2;
+                        currentY = y2;
+                    }
+                } else if (type === 'T' || type === 't') {
+                    // Сглаженная квадратичная кривая Безье
+                    for (let i = 0; i < coords.length; i += 2) {
+                        let x1 = currentX;
+                        let y1 = currentY;
+                        if (lastCommand === 'Q' || lastCommand === 'q' || lastCommand === 'T' || lastCommand === 't') {
+                            x1 = 2 * currentX - lastControlX;
+                            y1 = 2 * currentY - lastControlY;
+                        }
+                        
+                        const x2 = type === 'T' ? coords[i] : currentX + coords[i];
+                        const y2 = type === 'T' ? coords[i + 1] : currentY + coords[i + 1];
+                        
+                        for (let t = 1; t <= BEZIER_STEPS; t++) {
+                            const tt = t / BEZIER_STEPS;
+                            const px = quadraticBezier(currentX, x1, x2, tt);
+                            const py = quadraticBezier(currentY, y1, y2, tt);
+                            addPoint(px, py);
+                        }
+                        
+                        lastControlX = x1;
+                        lastControlY = y1;
+                        currentX = x2;
+                        currentY = y2;
+                    }
+                } else if (type === 'A' || type === 'a') {
+                    // Дуга (упрощённая аппроксимация точками)
+                    for (let i = 0; i < coords.length; i += 7) {
+                        const endX = type === 'A' ? coords[i + 5] : currentX + coords[i + 5];
+                        const endY = type === 'A' ? coords[i + 6] : currentY + coords[i + 6];
+                        
+                        // Линейная интерполяция для упрощения (дуги сложны)
+                        for (let t = 1; t <= BEZIER_STEPS; t++) {
+                            const tt = t / BEZIER_STEPS;
+                            const px = currentX + (endX - currentX) * tt;
+                            const py = currentY + (endY - currentY) * tt;
+                            addPoint(px, py);
+                        }
+                        
+                        currentX = endX;
+                        currentY = endY;
+                    }
+                } else if (type === 'Z' || type === 'z') {
+                    // Закрыть путь
+                    if (currentX !== startX || currentY !== startY) {
+                        addPoint(startX, startY);
+                    }
+                    currentX = startX;
+                    currentY = startY;
                 }
+                
+                lastCommand = type;
             });
         } else if (pathElement.tagName === 'circle') {
             const cx = parseFloat(pathElement.getAttribute('cx')) || 0;
