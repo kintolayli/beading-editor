@@ -701,6 +701,38 @@ class PixelGridDemo {
      */
     async saveProject() {
         try {
+            // Предлагаем имя файла по умолчанию
+            const defaultName = this.loadedFileName ?
+                this.loadedFileName.replace(/\.[^/.]+$/, '') :
+                'project';
+
+            // Запрашиваем имя файла у пользователя
+            const fileName = prompt('Введите имя файла проекта:', defaultName);
+
+            // Если пользователь отменил ввод, прерываем сохранение
+            if (fileName === null) {
+                return;
+            }
+
+            // Валидация и очистка имени файла
+            let cleanFileName = fileName.trim();
+            if (!cleanFileName) {
+                cleanFileName = defaultName;
+            }
+
+            // Удаляем недопустимые символы для имени файла
+            cleanFileName = cleanFileName.replace(/[<>:"/\\|?*]/g, '_');
+
+            // Убеждаемся, что имя файла не пустое после очистки
+            if (!cleanFileName) {
+                cleanFileName = 'project';
+            }
+
+            // Добавляем расширение, если его нет
+            if (!cleanFileName.endsWith('.beading')) {
+                cleanFileName += '.beading';
+            }
+
             const projectData = {
                 version: '1.0',
                 workspaceWidthMM: this.workspaceWidthMM,
@@ -730,15 +762,13 @@ class PixelGridDemo {
 
             const a = document.createElement('a');
             a.href = url;
-            a.download = this.loadedFileName ?
-                this.loadedFileName.replace(/\.[^/.]+$/, '') + '.beading' :
-                'project.beading';
+            a.download = cleanFileName;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            console.log('Проект успешно сохранен');
+            console.log('Проект успешно сохранен:', cleanFileName);
         } catch (error) {
             console.error('Ошибка при сохранении проекта:', error);
             alert('Ошибка при сохранении проекта: ' + error.message);
