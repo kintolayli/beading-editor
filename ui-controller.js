@@ -25,6 +25,8 @@ class UIController {
         this.loadProjectBtn = document.getElementById('loadProjectBtn');
         this.workspaceWidthInput = document.getElementById('workspaceWidthInput');
         this.workspaceHeightInput = document.getElementById('workspaceHeightInput');
+        this.workspaceWidthSlider = document.getElementById('workspaceWidthSlider');
+        this.workspaceHeightSlider = document.getElementById('workspaceHeightSlider');
         this.gridTypeButtons = document.querySelectorAll('.grid-type-btn');
         this.gridOffsetXInput = document.getElementById('gridOffsetX');
         this.gridOffsetYInput = document.getElementById('gridOffsetY');
@@ -102,6 +104,25 @@ class UIController {
         this.workspaceHeightInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.workspaceHeightInput.blur();
+            }
+        });
+
+        // Обработчики для ползунков рабочей области
+        this.workspaceWidthSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            this.workspaceWidthInput.value = value;
+            updateSliderProgress(this.workspaceWidthSlider);
+            if (this.callbacks.onWorkspaceWidthChange) {
+                this.callbacks.onWorkspaceWidthChange(value);
+            }
+        });
+
+        this.workspaceHeightSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            this.workspaceHeightInput.value = value;
+            updateSliderProgress(this.workspaceHeightSlider);
+            if (this.callbacks.onWorkspaceHeightChange) {
+                this.callbacks.onWorkspaceHeightChange(value);
             }
         });
 
@@ -260,6 +281,8 @@ class UIController {
         updateSliderProgress(this.scaleSlider);
         updateSliderProgress(this.gridOffsetXSlider);
         updateSliderProgress(this.gridOffsetYSlider);
+        updateSliderProgress(this.workspaceWidthSlider);
+        updateSliderProgress(this.workspaceHeightSlider);
         if (this.fillThresholdSlider) {
             updateSliderProgress(this.fillThresholdSlider);
         }
@@ -336,6 +359,21 @@ class UIController {
     updateWorkspaceInputs(width, height) {
         this.workspaceWidthInput.value = width.toFixed(1);
         this.workspaceHeightInput.value = height.toFixed(1);
+
+        // Обновляем ползунки
+        this.workspaceWidthSlider.value = width;
+        this.workspaceHeightSlider.value = height;
+
+        // Обновляем прогресс ползунков
+        const updateProgress = (slider) => {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const val = parseFloat(slider.value);
+            const progress = ((val - min) / (max - min)) * 100;
+            slider.style.setProperty('--slider-progress', `${progress}%`);
+        };
+        updateProgress(this.workspaceWidthSlider);
+        updateProgress(this.workspaceHeightSlider);
     }
 
     /**
