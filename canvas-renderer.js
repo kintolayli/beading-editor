@@ -136,16 +136,16 @@ class CanvasRenderer {
         const getOffset = (row, col) => {
             switch (gridType) {
                 case 'peyote':
-                    // Peyote: нечётные ряды смещаются на половину ширины вправо
-                    return {
-                        x: (row % 2 === 1) ? pixelWidthPx / 2 : 0,
-                        y: 0
-                    };
-                case 'brick':
-                    // Brick: нечётные столбцы смещаются на половину высоты вниз
+                    // Peyote: нечётные столбцы смещаются на половину высоты вниз
                     return {
                         x: 0,
                         y: (col % 2 === 1) ? pixelHeightPx / 2 : 0
+                    };
+                case 'brick':
+                    // Brick: нечётные ряды смещаются на половину ширины вправо
+                    return {
+                        x: (row % 2 === 1) ? pixelWidthPx / 2 : 0,
+                        y: 0
                     };
                 default:
                     return { x: 0, y: 0 };

@@ -316,9 +316,9 @@ class PixelGridDemo {
                 let offsetPxY = 0;
                 
                 if (this.gridType === 'peyote') {
-                    offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
-                } else if (this.gridType === 'brick') {
                     offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+                } else if (this.gridType === 'brick') {
+                    offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
                 }
                 
                 // Экранные координаты с учётом смещения сетки
