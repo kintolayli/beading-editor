@@ -10,6 +10,7 @@ class UIController {
      * @param {Function} callbacks.onWorkspaceHeightChange - вызывается при изменении высоты рабочей области
      * @param {Function} callbacks.onScaleChange - вызывается при изменении масштаба
      * @param {Function} callbacks.onFileUpload - вызывается при загрузке файла
+     * @param {Function} callbacks.onGridTypeChange - вызывается при изменении типа сетки
      * @param {Function} callbacks.onUpdateUI - вызывается для обновления UI
      */
     constructor(callbacks) {
@@ -22,6 +23,7 @@ class UIController {
         this.fileUpload = document.getElementById('fileUpload');
         this.workspaceWidthInput = document.getElementById('workspaceWidthInput');
         this.workspaceHeightInput = document.getElementById('workspaceHeightInput');
+        this.gridTypeButtons = document.querySelectorAll('.grid-type-btn');
         
         this.initialize();
     }
@@ -117,10 +119,35 @@ class UIController {
             }
         });
         
+        // Обработчики для кнопок выбора типа сетки
+        this.gridTypeButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const gridType = btn.dataset.type;
+                this.setActiveGridType(gridType);
+                if (this.callbacks.onGridTypeChange) {
+                    this.callbacks.onGridTypeChange(gridType);
+                }
+            });
+        });
+        
         // Инициализация прогресса ползунков
         updateSliderProgress(this.widthSlider);
         updateSliderProgress(this.heightSlider);
         updateSliderProgress(this.scaleSlider);
+    }
+    
+    /**
+     * Устанавливает активный тип сетки
+     * @param {string} gridType - тип сетки ('square', 'peyote', 'brick')
+     */
+    setActiveGridType(gridType) {
+        this.gridTypeButtons.forEach(btn => {
+            if (btn.dataset.type === gridType) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
     }
     
     /**

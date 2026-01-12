@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Масштабируемая пиксельная сетка</title>
+    <title>Бисерный редактор</title>
     <link
         href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Playfair+Display:wght@700&display=swap"
         rel="stylesheet">
@@ -14,8 +14,8 @@
 <body>
     <div class="container">
         <header>
-            <h1>Пиксельная сетка</h1>
-            <p class="subtitle">Демонстрация масштабирования без искажений</p>
+            <h1>Бисерный редактор</h1>
+            <p class="subtitle">Создание схем для бисероплетения</p>
         </header>
 
         <div class="main-content">
@@ -25,17 +25,17 @@
                         <div class="slider-section">
                             <div class="density-info">
                                 <div class="density-display" id="pixelDimensionsDisplay">1.0 × 1.0</div>
-                                <div class="density-label">размер пикселя (мм)</div>
+                                <div class="density-label">размер бисеринки (мм)</div>
                             </div>
                             <div class="input-wrapper">
-                                <label class="input-label">Ширина пикселя (мм)</label>
+                                <label class="input-label">Ширина бисеринки (мм)</label>
                                 <input type="number" id="pixelWidthInput" class="dimension-input" min="0.1" max="50"
                                     value="3.125" step="0.001">
                                 <input type="range" id="pixelWidthSlider" class="dimension-slider" min="0.5" max="10"
                                     value="3.125" step="0.125">
                             </div>
                             <div class="input-wrapper">
-                                <label class="input-label">Высота пикселя (мм)</label>
+                                <label class="input-label">Высота бисеринки (мм)</label>
                                 <input type="number" id="pixelHeightInput" class="dimension-input" min="0.1" max="50"
                                     value="3.125" step="0.001">
                                 <input type="range" id="pixelHeightSlider" class="dimension-slider" min="0.5" max="10"
@@ -45,13 +45,62 @@
                     </div>
 
                     <div class="control-group">
+                        <div class="grid-type-section">
+                            <label class="slider-label">Тип сетки</label>
+                            <div class="grid-type-buttons">
+                                <button class="grid-type-btn active" data-type="square">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                        <rect x="2" y="2" width="7" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="11" y="2" width="7" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="2" y="11" width="7" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="11" y="11" width="7" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                    </svg>
+                                    <span>Квадрат</span>
+                                </button>
+                                <button class="grid-type-btn" data-type="peyote">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                        <rect x="1" y="2" width="5" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="7.5" y="2" width="5" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="14" y="2" width="5" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="4.25" y="11" width="5" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="10.75" y="11" width="5" height="7" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                    </svg>
+                                    <span>Peyote</span>
+                                </button>
+                                <button class="grid-type-btn" data-type="brick">
+                                    <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                                        <rect x="2" y="1" width="7" height="5" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="11" y="1" width="7" height="5" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="5.5" y="7.5" width="7" height="5" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="2" y="14" width="7" height="5" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                        <rect x="11" y="14" width="7" height="5" stroke="currentColor"
+                                            stroke-width="1.5" />
+                                    </svg>
+                                    <span>Brick</span>
+                                </button>
+                            </div>
+                        </div>
+
                         <div class="stats">
                             <div class="stat-row">
                                 <span class="stat-label">Сетка</span>
                                 <span class="stat-value" id="gridSize">32×32</span>
                             </div>
                             <div class="stat-row">
-                                <span class="stat-label">Всего пикселей</span>
+                                <span class="stat-label">Всего бисеринок</span>
                                 <span class="stat-value" id="totalPixels">1,024</span>
                             </div>
                             <div class="stat-row">

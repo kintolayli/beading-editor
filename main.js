@@ -11,6 +11,9 @@ class PixelGridDemo {
         this.pixelWidthMM = 3.125;
         this.pixelHeightMM = 3.125;
 
+        // Тип сетки ('square', 'peyote', 'brick')
+        this.gridType = 'square';
+
         // Масштаб загруженного изображения
         this.scale = 1.0;
         this.hasLoadedFile = false;
@@ -41,6 +44,7 @@ class PixelGridDemo {
             onWorkspaceHeightChange: (value) => this.handleWorkspaceHeightChange(value),
             onScaleChange: (value) => this.handleScaleChange(value),
             onFileUpload: (file, extension) => this.handleFileUpload(file, extension),
+            onGridTypeChange: (type) => this.handleGridTypeChange(type),
             onUpdateUI: () => this.updateUI()
         });
 
@@ -252,6 +256,10 @@ class PixelGridDemo {
         this.render();
     }
 
+    handleGridTypeChange(type) {
+        this.gridType = type;
+        this.render();
+    }
 
     isPointInContour(x, y) {
         // Проверка методом ray casting
@@ -304,7 +312,8 @@ class PixelGridDemo {
             contour: this.contour,
             hasLoadedFile: this.hasLoadedFile,
             fileWidthMM: this.fileWidthMM,
-            fileHeightMM: this.fileHeightMM
+            fileHeightMM: this.fileHeightMM,
+            gridType: this.gridType
         });
     }
 }

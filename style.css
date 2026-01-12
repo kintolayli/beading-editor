@@ -298,6 +298,56 @@ input[type="range"]::-moz-range-track {
     border-radius: 3px;
 }
 
+.grid-type-section {
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.6rem;
+}
+
+.grid-type-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.grid-type-btn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 0.5rem 0.3rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    font-size: 0.6rem;
+}
+
+.grid-type-btn:hover {
+    background: rgba(0, 212, 255, 0.1);
+    border-color: rgba(0, 212, 255, 0.3);
+    color: var(--text-primary);
+}
+
+.grid-type-btn.active {
+    background: rgba(0, 212, 255, 0.15);
+    border-color: var(--accent-secondary);
+    color: var(--accent-secondary);
+}
+
+.grid-type-btn svg {
+    opacity: 0.7;
+}
+
+.grid-type-btn.active svg {
+    opacity: 1;
+}
+
 .stats {
     background: rgba(0, 255, 157, 0.05);
     border: 1px solid rgba(0, 255, 157, 0.15);

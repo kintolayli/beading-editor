@@ -23,6 +23,7 @@ class CanvasRenderer {
      * @param {boolean} renderData.hasLoadedFile - загружен ли файл
      * @param {number|null} renderData.fileWidthMM - ширина файла в мм
      * @param {number|null} renderData.fileHeightMM - высота файла в мм
+     * @param {string} renderData.gridType - тип сетки ('square', 'peyote', 'brick')
      */
     render(renderData) {
         const {
@@ -36,7 +37,8 @@ class CanvasRenderer {
             contour,
             hasLoadedFile,
             fileWidthMM,
-            fileHeightMM
+            fileHeightMM,
+            gridType = 'square'
         } = renderData;
         
         // Очистка
@@ -56,12 +58,15 @@ class CanvasRenderer {
             gridHeight,
             pixelWidthPx,
             pixelHeightPx,
+            canvasWidth,
+            canvasHeight,
             workspaceWidthMM,
             workspaceHeightMM,
             originalDrawing,
             hasLoadedFile,
             fileWidthMM,
-            fileHeightMM
+            fileHeightMM,
+            gridType
         });
         
         // Отрисовка контура
@@ -87,12 +92,15 @@ class CanvasRenderer {
             gridHeight,
             pixelWidthPx,
             pixelHeightPx,
+            canvasWidth,
+            canvasHeight,
             workspaceWidthMM,
             workspaceHeightMM,
             originalDrawing,
             hasLoadedFile,
             fileWidthMM,
-            fileHeightMM
+            fileHeightMM,
+            gridType = 'square'
         } = params;
         
         const ctx = this.ctx;
@@ -112,11 +120,42 @@ class CanvasRenderer {
             offsetY = (1.0 - scaleY) / 2.0;
         }
         
+        // Смещение для разных типов сеток
+        const getOffset = (row, col) => {
+            switch (gridType) {
+                case 'peyote':
+                    // Peyote: нечётные ряды смещаются на половину ширины вправо
+                    return {
+                        x: (row % 2 === 1) ? pixelWidthPx / 2 : 0,
+                        y: 0
+                    };
+                case 'brick':
+                    // Brick: нечётные столбцы смещаются на половину высоты вниз
+                    return {
+                        x: 0,
+                        y: (col % 2 === 1) ? pixelHeightPx / 2 : 0
+                    };
+                default:
+                    return { x: 0, y: 0 };
+            }
+        };
+        
         for (let row = 0; row < gridHeight; row++) {
             for (let col = 0; col < gridWidth; col++) {
+                const offset = getOffset(row, col);
+                
+                // Экранные координаты с учётом смещения
+                const x = col * pixelWidthPx + offset.x;
+                const y = row * pixelHeightPx + offset.y;
+                
+                // Пропускаем бисеринки, которые полностью выходят за границы
+                if (x >= canvasWidth || y >= canvasHeight) {
+                    continue;
+                }
+                
                 // Нормализованные координаты центра пикселя относительно рабочей области
-                const workspaceX = (col + 0.5) / gridWidth;
-                const workspaceY = (row + 0.5) / gridHeight;
+                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
+                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
                 
                 // Преобразуем координаты рабочей области в координаты файла
                 let fileX = workspaceX;
@@ -129,10 +168,10 @@ class CanvasRenderer {
                     
                     // Проверяем, находится ли пиксель в пределах файла
                     if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
-                        // Пиксель вне файла - не закрашиваем
+                        // Пиксель вне файла - рисуем только границу
                         ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
                         ctx.lineWidth = 0.5;
-                        ctx.strokeRect(col * pixelWidthPx, row * pixelHeightPx, pixelWidthPx, pixelHeightPx);
+                        this.drawBead(ctx, x, y, pixelWidthPx, pixelHeightPx, gridType, false);
                         continue;
                     }
                 }
@@ -140,22 +179,76 @@ class CanvasRenderer {
                 // Проверяем, должен ли пиксель быть закрашен (используем координаты файла)
                 const isFilled = originalDrawing(fileX, fileY);
                 
-                // Экранные координаты
-                const x = col * pixelWidthPx;
-                const y = row * pixelHeightPx;
-                
-                // Отрисовка пикселя
-                if (isFilled) {
-                    ctx.fillStyle = 'rgba(0, 255, 157, 0.8)';
-                    ctx.fillRect(x, y, pixelWidthPx, pixelHeightPx);
-                }
-                
-                // Отрисовка границ пикселя
-                ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
-                ctx.lineWidth = 0.5;
-                ctx.strokeRect(x, y, pixelWidthPx, pixelHeightPx);
+                // Отрисовка бисеринки
+                this.drawBead(ctx, x, y, pixelWidthPx, pixelHeightPx, gridType, isFilled);
             }
         }
+    }
+    
+    /**
+     * Отрисовывает одну бисеринку
+     * @param {CanvasRenderingContext2D} ctx - контекст canvas
+     * @param {number} x - координата X
+     * @param {number} y - координата Y
+     * @param {number} width - ширина
+     * @param {number} height - высота
+     * @param {string} gridType - тип сетки
+     * @param {boolean} isFilled - заполнена ли бисеринка
+     */
+    drawBead(ctx, x, y, width, height, gridType, isFilled) {
+        const padding = 1; // Отступ между бисеринками
+        const drawX = x + padding / 2;
+        const drawY = y + padding / 2;
+        const drawWidth = width - padding;
+        const drawHeight = height - padding;
+        
+        if (isFilled) {
+            ctx.fillStyle = 'rgba(0, 255, 157, 0.8)';
+            
+            // Для peyote и brick рисуем скруглённые бисеринки
+            if (gridType === 'peyote' || gridType === 'brick') {
+                const radius = Math.min(drawWidth, drawHeight) / 4;
+                this.roundRect(ctx, drawX, drawY, drawWidth, drawHeight, radius);
+                ctx.fill();
+            } else {
+                ctx.fillRect(drawX, drawY, drawWidth, drawHeight);
+            }
+        }
+        
+        // Отрисовка границ
+        ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
+        ctx.lineWidth = 0.5;
+        
+        if (gridType === 'peyote' || gridType === 'brick') {
+            const radius = Math.min(drawWidth, drawHeight) / 4;
+            this.roundRect(ctx, drawX, drawY, drawWidth, drawHeight, radius);
+            ctx.stroke();
+        } else {
+            ctx.strokeRect(drawX, drawY, drawWidth, drawHeight);
+        }
+    }
+    
+    /**
+     * Рисует прямоугольник со скруглёнными углами
+     * @param {CanvasRenderingContext2D} ctx - контекст canvas
+     * @param {number} x - координата X
+     * @param {number} y - координата Y
+     * @param {number} width - ширина
+     * @param {number} height - высота
+     * @param {number} radius - радиус скругления
+     */
+    roundRect(ctx, x, y, width, height, radius) {
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.lineTo(x + width - radius, y);
+        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        ctx.lineTo(x + width, y + height - radius);
+        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        ctx.lineTo(x + radius, y + height);
+        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        ctx.lineTo(x, y + radius);
+        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.closePath();
     }
     
     /**
