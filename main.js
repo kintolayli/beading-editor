@@ -733,31 +733,49 @@ class PixelGridDemo {
                 this.loadedFileName.replace(/\.[^/.]+$/, '') :
                 'project';
 
-            // Запрашиваем имя файла у пользователя
-            const fileName = prompt('Введите имя файла проекта:', defaultName);
+            let cleanFileName;
+            let isElectron = false;
 
-            // Если пользователь отменил ввод, прерываем сохранение
-            if (fileName === null) {
-                return;
-            }
+            // Проверяем, запущено ли приложение в Electron
+            const isElectronEnv = typeof window !== 'undefined' &&
+                typeof window.process !== 'undefined' &&
+                window.process.type === 'renderer';
 
-            // Валидация и очистка имени файла
-            let cleanFileName = fileName.trim();
-            if (!cleanFileName) {
-                cleanFileName = defaultName;
-            }
+            if (isElectronEnv) {
+                try {
+                    // Используем IPC для вызова диалога из главного процесса
+                    const { ipcRenderer } = require('electron');
 
-            // Удаляем недопустимые символы для имени файла
-            cleanFileName = cleanFileName.replace(/[<>:"/\\|?*]/g, '_');
+                    const result = await ipcRenderer.invoke('show-save-dialog', {
+                        title: 'Сохранить проект',
+                        defaultPath: defaultName + '.beading',
+                        filters: [
+                            { name: 'Проекты бисероплетения', extensions: ['beading'] },
+                            { name: 'Все файлы', extensions: ['*'] }
+                        ]
+                    });
 
-            // Убеждаемся, что имя файла не пустое после очистки
-            if (!cleanFileName) {
-                cleanFileName = 'project';
-            }
+                    // Если пользователь отменил диалог
+                    if (result.canceled || !result.filePath) {
+                        return;
+                    }
 
-            // Добавляем расширение, если его нет
-            if (!cleanFileName.endsWith('.beading')) {
-                cleanFileName += '.beading';
+                    cleanFileName = result.filePath;
+                    isElectron = true;
+                } catch (error) {
+                    console.error('Ошибка при открытии диалога сохранения:', error);
+                    // Fallback на браузерный диалог
+                    cleanFileName = await this.showSaveDialogBrowser(defaultName);
+                    if (!cleanFileName) {
+                        return; // Пользователь отменил
+                    }
+                }
+            } else {
+                // Fallback для браузера - используем input элемент
+                cleanFileName = await this.showSaveDialogBrowser(defaultName);
+                if (!cleanFileName) {
+                    return; // Пользователь отменил
+                }
             }
 
             const projectData = {
@@ -785,22 +803,131 @@ class PixelGridDemo {
             };
 
             const jsonString = JSON.stringify(projectData, null, 2);
-            const blob = new Blob([jsonString], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
 
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = cleanFileName;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            // Сохраняем файл в зависимости от окружения
+            if (isElectron) {
+                try {
+                    // Используем IPC для сохранения файла из главного процесса
+                    const { ipcRenderer } = require('electron');
+                    const result = await ipcRenderer.invoke('save-file', cleanFileName, jsonString);
 
-            // Проект успешно сохранен
+                    if (!result.success) {
+                        throw new Error(result.error || 'Неизвестная ошибка при сохранении');
+                    }
+                    // Проект успешно сохранен
+                } catch (error) {
+                    console.error('Ошибка при сохранении проекта в Electron:', error);
+                    alert('Ошибка при сохранении проекта: ' + error.message);
+                }
+            } else {
+                // Fallback для браузера - скачивание файла
+                const blob = new Blob([jsonString], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = cleanFileName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                // Проект успешно сохранен
+            }
         } catch (error) {
             console.error('Ошибка при сохранении проекта:', error);
             alert('Ошибка при сохранении проекта: ' + error.message);
         }
+    }
+
+    /**
+     * Показывает диалог сохранения для браузера (fallback)
+     */
+    async showSaveDialogBrowser(defaultName) {
+        return new Promise((resolve) => {
+            // Создаем модальное окно
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 10000;
+            `;
+
+            const dialog = document.createElement('div');
+            dialog.style.cssText = `
+                background: white;
+                padding: 20px;
+                border-radius: 8px;
+                min-width: 300px;
+            `;
+
+            dialog.innerHTML = `
+                <h3 style="margin-top: 0;">Сохранить проект</h3>
+                <label>
+                    Имя файла:
+                    <input type="text" id="fileNameInput" value="${defaultName}.beading" style="width: 100%; margin-top: 8px; padding: 8px; box-sizing: border-box;">
+                </label>
+                <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
+                    <button id="cancelBtn" style="padding: 8px 16px;">Отмена</button>
+                    <button id="saveBtn" style="padding: 8px 16px;">Сохранить</button>
+                </div>
+            `;
+
+            modal.appendChild(dialog);
+            document.body.appendChild(modal);
+
+            const input = dialog.querySelector('#fileNameInput');
+            input.select();
+
+            const cleanup = () => {
+                document.body.removeChild(modal);
+            };
+
+            dialog.querySelector('#cancelBtn').addEventListener('click', () => {
+                cleanup();
+                resolve(null);
+            });
+
+            dialog.querySelector('#saveBtn').addEventListener('click', () => {
+                let fileName = input.value.trim();
+                if (!fileName) {
+                    fileName = defaultName;
+                }
+                fileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
+                if (!fileName.endsWith('.beading')) {
+                    fileName += '.beading';
+                }
+                cleanup();
+                resolve(fileName);
+            });
+
+            // Закрытие по Escape
+            const handleEscape = (e) => {
+                if (e.key === 'Escape') {
+                    cleanup();
+                    document.removeEventListener('keydown', handleEscape);
+                    resolve(null);
+                }
+            };
+            document.addEventListener('keydown', handleEscape);
+
+            // Закрытие по клику вне диалога
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    cleanup();
+                    document.removeEventListener('keydown', handleEscape);
+                    resolve(null);
+                }
+            });
+
+            input.focus();
+        });
     }
 
     /**

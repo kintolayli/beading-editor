@@ -1,5 +1,6 @@
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
+const fs = require('fs')
 
 function createWindow() {
     const win = new BrowserWindow({
@@ -21,6 +22,22 @@ function createWindow() {
     // Опционально: открыть DevTools для отладки (закомментируйте в продакшене)
     // win.webContents.openDevTools()
 }
+
+// Обработчик для диалога сохранения
+ipcMain.handle('show-save-dialog', async (event, options) => {
+    const result = await dialog.showSaveDialog(options)
+    return result
+})
+
+// Обработчик для сохранения файла
+ipcMain.handle('save-file', async (event, filePath, data) => {
+    try {
+        fs.writeFileSync(filePath, data, 'utf8')
+        return { success: true }
+    } catch (error) {
+        return { success: false, error: error.message }
+    }
+})
 
 app.whenReady().then(createWindow)
 
