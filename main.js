@@ -18,11 +18,18 @@ class PixelGridDemo {
         this.gridOffsetX = 0;
         this.gridOffsetY = 0;
 
+        // Масштаб для SVG файлов
+        this.scale = 1.0;
+        this.fileType = null; // 'svg' или 'dxf'
         this.hasLoadedFile = false;
 
-        // Размеры загруженного файла в мм
+        // Размеры загруженного файла в мм (с учётом масштаба для SVG)
         this.fileWidthMM = null;
         this.fileHeightMM = null;
+        
+        // Исходные размеры файла (без масштаба, только для SVG)
+        this.originalFileWidthMM = null;
+        this.originalFileHeightMM = null;
         
         // Имя загруженного файла
         this.loadedFileName = null;
@@ -47,6 +54,7 @@ class PixelGridDemo {
             onPixelHeightChange: (value) => this.handlePixelHeightChange(value),
             onWorkspaceWidthChange: (value) => this.handleWorkspaceWidthChange(value),
             onWorkspaceHeightChange: (value) => this.handleWorkspaceHeightChange(value),
+            onScaleChange: (value) => this.handleScaleChange(value),
             onFileUpload: (file, extension) => this.handleFileUpload(file, extension),
             onGridTypeChange: (type) => this.handleGridTypeChange(type),
             onGridOffsetXChange: (value) => this.handleGridOffsetXChange(value),
@@ -103,8 +111,12 @@ class PixelGridDemo {
         // Сбрасываем размеры файла для дефолтного рисунка
         this.fileWidthMM = null;
         this.fileHeightMM = null;
+        this.originalFileWidthMM = null;
+        this.originalFileHeightMM = null;
         this.loadedFileName = null;
+        this.fileType = null;
         this.hasLoadedFile = false;
+        this.scale = 1.0;
 
         // Создаём исходный рисунок в виде функции,
         // которая определяет, закрашен ли пиксель в данной нормализованной позиции
@@ -113,6 +125,51 @@ class PixelGridDemo {
         this.originalDrawing = this.originalDrawingFunction;
     }
 
+    /**
+     * Применяет масштаб к SVG файлу (для DXF не используется)
+     */
+    applyScale() {
+        // Масштабирование применяется только для SVG файлов
+        if (!this.hasLoadedFile || this.fileType !== 'svg' || !this.originalContour || !this.originalDrawingFunction) {
+            return;
+        }
+
+        // Применяем масштаб к размерам файла
+        if (this.originalFileWidthMM && this.originalFileHeightMM) {
+            this.fileWidthMM = this.originalFileWidthMM * this.scale;
+            this.fileHeightMM = this.originalFileHeightMM * this.scale;
+        }
+
+        // Применяем масштаб к контуру
+        const centerX = 0.5;
+        const centerY = 0.5;
+
+        this.contour = this.originalContour.map(point => {
+            const dx = point.x - centerX;
+            const dy = point.y - centerY;
+            return {
+                x: centerX + dx * this.scale,
+                y: centerY + dy * this.scale
+            };
+        });
+
+        // Создаём масштабированную функцию рисунка
+        const originalFunc = this.originalDrawingFunction;
+        this.originalDrawing = (normalizedX, normalizedY) => {
+            // Преобразуем координаты обратно к исходному масштабу
+            const dx = normalizedX - centerX;
+            const dy = normalizedY - centerY;
+            const origX = centerX + dx / this.scale;
+            const origY = centerY + dy / this.scale;
+
+            // Проверяем границы
+            if (origX < 0 || origX > 1 || origY < 0 || origY > 1) {
+                return false;
+            }
+
+            return originalFunc(origX, origY);
+        };
+    }
 
     createHeartContour() {
         // Контур сердца в нормализованных координатах [0, 1]
@@ -164,6 +221,9 @@ class PixelGridDemo {
                 throw new Error('Неподдерживаемый формат файла');
             }
 
+            // Сохраняем тип файла
+            this.fileType = extension;
+            
             // Сохраняем контур и функцию отрисовки
             if (result.contour && result.contour.length > 0) {
                 this.originalContour = result.contour;
@@ -172,11 +232,25 @@ class PixelGridDemo {
             this.originalDrawingFunction = result.drawingFunction;
             this.originalDrawing = result.drawingFunction;
 
-            // Сохраняем размеры файла
-            this.fileWidthMM = result.width;
-            this.fileHeightMM = result.height;
             this.loadedFileName = file.name;
             this.hasLoadedFile = true;
+
+            if (extension === 'svg') {
+                // Для SVG сохраняем исходные размеры и применяем масштаб
+                this.originalFileWidthMM = result.width;
+                this.originalFileHeightMM = result.height;
+                this.scale = 1.0;
+                this.applyScale();
+                this.uiController.showScaleSection(true);
+                this.uiController.updateScale(1.0);
+            } else if (extension === 'dxf') {
+                // Для DXF используем размеры напрямую, без масштабирования
+                this.fileWidthMM = result.width;
+                this.fileHeightMM = result.height;
+                this.originalFileWidthMM = null;
+                this.originalFileHeightMM = null;
+                this.uiController.showScaleSection(false);
+            }
 
             // Обновляем UI
             this.uiController.updateFileInfo(this.loadedFileName, this.fileWidthMM, this.fileHeightMM);
@@ -216,6 +290,24 @@ class PixelGridDemo {
         this.workspaceHeightMM = value;
         this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
         this.setupCanvas();
+        this.updateUI();
+        this.render();
+    }
+
+    handleScaleChange(value) {
+        // Масштабирование применяется только для SVG файлов
+        if (this.fileType !== 'svg') {
+            return;
+        }
+        
+        this.scale = value;
+        this.applyScale();
+        
+        // Обновляем информацию о файле с новыми размерами
+        if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM && this.loadedFileName) {
+            this.uiController.updateFileInfo(this.loadedFileName, this.fileWidthMM, this.fileHeightMM);
+        }
+        
         this.updateUI();
         this.render();
     }
