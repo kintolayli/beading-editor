@@ -21,7 +21,7 @@ function createWindow() {
             nodeIntegration: true,
             contextIsolation: false
         },
-        // icon: path.join(__dirname, 'icon.ico') // Раскомментируйте, если добавите иконку
+        icon: path.join(__dirname, 'icon.ico') // Раскомментируйте, если добавите иконку
     })
 
     // Убираем стандартное меню (Файл, Правка...), чтобы выглядело чисто
