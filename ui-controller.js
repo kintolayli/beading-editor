@@ -21,6 +21,8 @@ class UIController {
         this.heightSlider = document.getElementById('pixelHeightSlider');
         this.scaleSlider = document.getElementById('scaleSlider');
         this.fileUpload = document.getElementById('fileUpload');
+        this.saveProjectBtn = document.getElementById('saveProjectBtn');
+        this.loadProjectBtn = document.getElementById('loadProjectBtn');
         this.workspaceWidthInput = document.getElementById('workspaceWidthInput');
         this.workspaceHeightInput = document.getElementById('workspaceHeightInput');
         this.gridTypeButtons = document.querySelectorAll('.grid-type-btn');
@@ -124,6 +126,36 @@ class UIController {
                 alert('Пожалуйста, выберите SVG или DXF файл');
             }
         });
+        
+        // Обработчик для сохранения проекта
+        if (this.saveProjectBtn) {
+            this.saveProjectBtn.addEventListener('click', () => {
+                if (this.callbacks.onSaveProject) {
+                    this.callbacks.onSaveProject();
+                }
+            });
+        }
+        
+        // Обработчик для загрузки проекта
+        if (this.loadProjectBtn) {
+            this.loadProjectBtn.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                if (extension === 'beading' || extension === 'json') {
+                    if (this.callbacks.onLoadProject) {
+                        this.callbacks.onLoadProject(file);
+                    }
+                } else {
+                    alert('Пожалуйста, выберите файл проекта (.beading или .json)');
+                }
+                
+                // Сбрасываем значение input, чтобы можно было загрузить тот же файл снова
+                e.target.value = '';
+            });
+        }
         
         // Обработчики для кнопок выбора типа сетки
         this.gridTypeButtons.forEach(btn => {

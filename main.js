@@ -48,6 +48,10 @@ class PixelGridDemo {
         // Флаг для автозагрузки (чтобы не показывать alert)
         this.isAutoLoading = false;
 
+        // Данные загруженного файла для сохранения проекта
+        this.loadedFileData = null; // base64 строка файла
+        this.loadedFileExtension = null; // 'svg' или 'dxf'
+
         // Инициализация модулей
         this.renderer = new CanvasRenderer(this.ctx);
         this.svgLoader = new SVGLoader();
@@ -67,6 +71,8 @@ class PixelGridDemo {
             onGridTypeChange: (type) => this.handleGridTypeChange(type),
             onGridOffsetXChange: (value) => this.handleGridOffsetXChange(value),
             onGridOffsetYChange: (value) => this.handleGridOffsetYChange(value),
+            onSaveProject: () => this.saveProject(),
+            onLoadProject: (file) => this.loadProject(file),
             onUpdateUI: () => this.updateUI()
         });
 
@@ -442,6 +448,16 @@ class PixelGridDemo {
             this.loadedFileName = file.name;
             this.hasLoadedFile = true;
 
+            // Сохраняем файл как base64 для сохранения проекта
+            this.loadedFileExtension = extension;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Убираем префикс data:...;base64,
+                const base64String = e.target.result.split(',')[1];
+                this.loadedFileData = base64String;
+            };
+            reader.readAsDataURL(file);
+
             if (extension === 'svg') {
                 // Для SVG сохраняем исходные размеры и применяем масштаб
                 this.originalFileWidthMM = result.width;
@@ -678,6 +694,139 @@ class PixelGridDemo {
 
         // Обновляем статистику после рендеринга
         this.updateUI();
+    }
+
+    /**
+     * Сохраняет проект в JSON файл
+     */
+    async saveProject() {
+        try {
+            const projectData = {
+                version: '1.0',
+                workspaceWidthMM: this.workspaceWidthMM,
+                workspaceHeightMM: this.workspaceHeightMM,
+                pixelWidthMM: this.pixelWidthMM,
+                pixelHeightMM: this.pixelHeightMM,
+                gridType: this.gridType,
+                gridOffsetX: this.gridOffsetX,
+                gridOffsetY: this.gridOffsetY,
+                scale: this.scale,
+                fileType: this.fileType,
+                hasLoadedFile: this.hasLoadedFile,
+                fileWidthMM: this.fileWidthMM,
+                fileHeightMM: this.fileHeightMM,
+                originalFileWidthMM: this.originalFileWidthMM,
+                originalFileHeightMM: this.originalFileHeightMM,
+                loadedFileName: this.loadedFileName,
+                loadedFileData: this.loadedFileData, // base64
+                loadedFileExtension: this.loadedFileExtension,
+                originalContour: this.originalContour,
+                contour: this.contour
+            };
+
+            const jsonString = JSON.stringify(projectData, null, 2);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = this.loadedFileName ?
+                this.loadedFileName.replace(/\.[^/.]+$/, '') + '.beading' :
+                'project.beading';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            console.log('Проект успешно сохранен');
+        } catch (error) {
+            console.error('Ошибка при сохранении проекта:', error);
+            alert('Ошибка при сохранении проекта: ' + error.message);
+        }
+    }
+
+    /**
+     * Загружает проект из JSON файла
+     */
+    async loadProject(file) {
+        try {
+            const text = await file.text();
+            const projectData = JSON.parse(text);
+
+            // Восстанавливаем настройки
+            this.workspaceWidthMM = projectData.workspaceWidthMM || 150;
+            this.workspaceHeightMM = projectData.workspaceHeightMM || 150;
+            this.pixelWidthMM = projectData.pixelWidthMM || 3.125;
+            this.pixelHeightMM = projectData.pixelHeightMM || 3.125;
+            this.gridType = projectData.gridType || 'peyote';
+            this.gridOffsetX = projectData.gridOffsetX || 0;
+            this.gridOffsetY = projectData.gridOffsetY || 0;
+            this.scale = projectData.scale || 1.0;
+
+            // Восстанавливаем данные файла
+            this.fileType = projectData.fileType;
+            this.hasLoadedFile = projectData.hasLoadedFile || false;
+            this.fileWidthMM = projectData.fileWidthMM;
+            this.fileHeightMM = projectData.fileHeightMM;
+            this.originalFileWidthMM = projectData.originalFileWidthMM;
+            this.originalFileHeightMM = projectData.originalFileHeightMM;
+            this.loadedFileName = projectData.loadedFileName;
+            this.originalContour = projectData.originalContour;
+            this.contour = projectData.contour;
+
+            // Восстанавливаем файл, если он был сохранен
+            if (projectData.hasLoadedFile && projectData.loadedFileData && projectData.loadedFileExtension) {
+                // Конвертируем base64 обратно в Blob
+                const base64Data = projectData.loadedFileData;
+                const byteCharacters = atob(base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray]);
+
+                // Создаем File объект
+                const fileObj = new File([blob], projectData.loadedFileName || 'file.' + projectData.loadedFileExtension, {
+                    type: projectData.loadedFileExtension === 'svg' ? 'image/svg+xml' : 'application/dxf'
+                });
+
+                // Загружаем файл
+                await this.handleFileUpload(fileObj, projectData.loadedFileExtension);
+
+                // Восстанавливаем масштаб для SVG (после загрузки файла)
+                if (projectData.loadedFileExtension === 'svg' && projectData.scale !== undefined) {
+                    this.scale = projectData.scale;
+                    this.applyScale();
+                    this.uiController.updateScale(this.scale);
+                }
+            } else {
+                // Если файла не было, восстанавливаем пустое состояние
+                this.createOriginalDrawing();
+            }
+
+            // Обновляем UI
+            this.uiController.updatePixelInputs(this.pixelWidthMM, this.pixelHeightMM);
+            this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
+            this.uiController.setActiveGridType(this.gridType);
+            this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
+            if (this.fileType === 'svg') {
+                this.uiController.showScaleSection(true);
+                this.uiController.updateScale(this.scale);
+            } else {
+                this.uiController.showScaleSection(false);
+            }
+
+            // Настраиваем canvas и перерисовываем
+            this.setupCanvas();
+            this.updateUI();
+            this.render();
+
+            console.log('Проект успешно загружен');
+        } catch (error) {
+            console.error('Ошибка при загрузке проекта:', error);
+            alert('Ошибка при загрузке проекта: ' + error.message);
+        }
     }
 }
 
