@@ -24,6 +24,10 @@ class UIController {
         this.workspaceWidthInput = document.getElementById('workspaceWidthInput');
         this.workspaceHeightInput = document.getElementById('workspaceHeightInput');
         this.gridTypeButtons = document.querySelectorAll('.grid-type-btn');
+        this.gridOffsetXInput = document.getElementById('gridOffsetX');
+        this.gridOffsetYInput = document.getElementById('gridOffsetY');
+        this.gridOffsetXSlider = document.getElementById('gridOffsetXSlider');
+        this.gridOffsetYSlider = document.getElementById('gridOffsetYSlider');
         
         this.initialize();
     }
@@ -130,10 +134,58 @@ class UIController {
             });
         });
         
+        // Обработчики для смещения сетки по X
+        this.gridOffsetXInput.addEventListener('blur', () => {
+            const value = this.clampOffset(parseFloat(this.gridOffsetXInput.value));
+            if (this.callbacks.onGridOffsetXChange) {
+                this.callbacks.onGridOffsetXChange(value);
+            }
+        });
+        
+        this.gridOffsetXInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.gridOffsetXInput.blur();
+            }
+        });
+        
+        this.gridOffsetXSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            this.gridOffsetXInput.value = value.toFixed(1);
+            updateSliderProgress(this.gridOffsetXSlider);
+            if (this.callbacks.onGridOffsetXChange) {
+                this.callbacks.onGridOffsetXChange(value);
+            }
+        });
+        
+        // Обработчики для смещения сетки по Y
+        this.gridOffsetYInput.addEventListener('blur', () => {
+            const value = this.clampOffset(parseFloat(this.gridOffsetYInput.value));
+            if (this.callbacks.onGridOffsetYChange) {
+                this.callbacks.onGridOffsetYChange(value);
+            }
+        });
+        
+        this.gridOffsetYInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                this.gridOffsetYInput.blur();
+            }
+        });
+        
+        this.gridOffsetYSlider.addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            this.gridOffsetYInput.value = value.toFixed(1);
+            updateSliderProgress(this.gridOffsetYSlider);
+            if (this.callbacks.onGridOffsetYChange) {
+                this.callbacks.onGridOffsetYChange(value);
+            }
+        });
+        
         // Инициализация прогресса ползунков
         updateSliderProgress(this.widthSlider);
         updateSliderProgress(this.heightSlider);
         updateSliderProgress(this.scaleSlider);
+        updateSliderProgress(this.gridOffsetXSlider);
+        updateSliderProgress(this.gridOffsetYSlider);
     }
     
     /**
@@ -263,5 +315,43 @@ class UIController {
         const min = 10;
         const max = 1000;
         return Math.min(Math.max(value, min), max);
+    }
+    
+    /**
+     * Валидация смещения сетки
+     * @param {number} value - значение
+     * @returns {number} валидированное значение
+     */
+    clampOffset(value) {
+        if (isNaN(value)) return 0;
+        const min = -50;
+        const max = 50;
+        return Math.min(Math.max(value, min), max);
+    }
+    
+    /**
+     * Обновляет значения смещения сетки
+     * @param {number} offsetX - смещение по X
+     * @param {number} offsetY - смещение по Y
+     */
+    updateGridOffsetInputs(offsetX, offsetY) {
+        this.gridOffsetXInput.value = offsetX.toFixed(1);
+        this.gridOffsetYInput.value = offsetY.toFixed(1);
+        
+        if (offsetX >= parseFloat(this.gridOffsetXSlider.min) && offsetX <= parseFloat(this.gridOffsetXSlider.max)) {
+            this.gridOffsetXSlider.value = offsetX;
+            const min = parseFloat(this.gridOffsetXSlider.min);
+            const max = parseFloat(this.gridOffsetXSlider.max);
+            const progress = ((offsetX - min) / (max - min)) * 100;
+            this.gridOffsetXSlider.style.setProperty('--slider-progress', `${progress}%`);
+        }
+        
+        if (offsetY >= parseFloat(this.gridOffsetYSlider.min) && offsetY <= parseFloat(this.gridOffsetYSlider.max)) {
+            this.gridOffsetYSlider.value = offsetY;
+            const min = parseFloat(this.gridOffsetYSlider.min);
+            const max = parseFloat(this.gridOffsetYSlider.max);
+            const progress = ((offsetY - min) / (max - min)) * 100;
+            this.gridOffsetYSlider.style.setProperty('--slider-progress', `${progress}%`);
+        }
     }
 }

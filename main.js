@@ -13,6 +13,10 @@ class PixelGridDemo {
 
         // Тип сетки ('square', 'peyote', 'brick')
         this.gridType = 'square';
+        
+        // Смещение сетки в мм
+        this.gridOffsetX = 0;
+        this.gridOffsetY = 0;
 
         // Масштаб загруженного изображения
         this.scale = 1.0;
@@ -45,6 +49,8 @@ class PixelGridDemo {
             onScaleChange: (value) => this.handleScaleChange(value),
             onFileUpload: (file, extension) => this.handleFileUpload(file, extension),
             onGridTypeChange: (type) => this.handleGridTypeChange(type),
+            onGridOffsetXChange: (value) => this.handleGridOffsetXChange(value),
+            onGridOffsetYChange: (value) => this.handleGridOffsetYChange(value),
             onUpdateUI: () => this.updateUI()
         });
 
@@ -260,6 +266,18 @@ class PixelGridDemo {
         this.gridType = type;
         this.render();
     }
+    
+    handleGridOffsetXChange(value) {
+        this.gridOffsetX = value;
+        this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
+        this.render();
+    }
+    
+    handleGridOffsetYChange(value) {
+        this.gridOffsetY = value;
+        this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
+        this.render();
+    }
 
     isPointInContour(x, y) {
         // Проверка методом ray casting
@@ -314,6 +332,10 @@ class PixelGridDemo {
         const pixelWidthPx = canvasWidth / gridWidth;
         const pixelHeightPx = canvasHeight / gridHeight;
         
+        // Преобразуем смещение из мм в пиксели экрана
+        const gridOffsetPxX = (this.gridOffsetX / this.workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (this.gridOffsetY / this.workspaceHeightMM) * canvasHeight;
+        
         // Вычисляем масштаб для файла
         let scaleX = 1.0;
         let scaleY = 1.0;
@@ -341,9 +363,9 @@ class PixelGridDemo {
                     offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
                 }
                 
-                // Экранные координаты
-                const x = col * pixelWidthPx + offsetPxX;
-                const y = row * pixelHeightPx + offsetPxY;
+                // Экранные координаты с учётом смещения сетки
+                const x = col * pixelWidthPx + offsetPxX + gridOffsetPxX;
+                const y = row * pixelHeightPx + offsetPxY + gridOffsetPxY;
                 
                 // Нормализованные координаты центра
                 const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
@@ -388,7 +410,9 @@ class PixelGridDemo {
             hasLoadedFile: this.hasLoadedFile,
             fileWidthMM: this.fileWidthMM,
             fileHeightMM: this.fileHeightMM,
-            gridType: this.gridType
+            gridType: this.gridType,
+            gridOffsetX: this.gridOffsetX,
+            gridOffsetY: this.gridOffsetY
         });
         
         // Обновляем статистику после рендеринга

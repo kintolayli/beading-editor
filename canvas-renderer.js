@@ -24,6 +24,8 @@ class CanvasRenderer {
      * @param {number|null} renderData.fileWidthMM - ширина файла в мм
      * @param {number|null} renderData.fileHeightMM - высота файла в мм
      * @param {string} renderData.gridType - тип сетки ('square', 'peyote', 'brick')
+     * @param {number} renderData.gridOffsetX - смещение сетки по X в мм
+     * @param {number} renderData.gridOffsetY - смещение сетки по Y в мм
      */
     render(renderData) {
         const {
@@ -38,7 +40,9 @@ class CanvasRenderer {
             hasLoadedFile,
             fileWidthMM,
             fileHeightMM,
-            gridType = 'square'
+            gridType = 'square',
+            gridOffsetX = 0,
+            gridOffsetY = 0
         } = renderData;
         
         // Очистка
@@ -66,7 +70,9 @@ class CanvasRenderer {
             hasLoadedFile,
             fileWidthMM,
             fileHeightMM,
-            gridType
+            gridType,
+            gridOffsetX,
+            gridOffsetY
         });
         
         // Отрисовка контура
@@ -100,10 +106,16 @@ class CanvasRenderer {
             hasLoadedFile,
             fileWidthMM,
             fileHeightMM,
-            gridType = 'square'
+            gridType = 'square',
+            gridOffsetX = 0,
+            gridOffsetY = 0
         } = params;
         
         const ctx = this.ctx;
+        
+        // Преобразуем смещение из мм в пиксели экрана
+        const gridOffsetPxX = (gridOffsetX / workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (gridOffsetY / workspaceHeightMM) * canvasHeight;
         
         // Вычисляем масштаб для преобразования координат файла в координаты рабочей области
         let scaleX = 1.0;
@@ -144,9 +156,9 @@ class CanvasRenderer {
             for (let col = 0; col < gridWidth; col++) {
                 const offset = getOffset(row, col);
                 
-                // Экранные координаты с учётом смещения
-                const x = col * pixelWidthPx + offset.x;
-                const y = row * pixelHeightPx + offset.y;
+                // Экранные координаты с учётом смещения сетки и типа сетки
+                const x = col * pixelWidthPx + offset.x + gridOffsetPxX;
+                const y = row * pixelHeightPx + offset.y + gridOffsetPxY;
                 
                 // Пропускаем бисеринки, которые полностью выходят за границы
                 if (x >= canvasWidth || y >= canvasHeight) {
