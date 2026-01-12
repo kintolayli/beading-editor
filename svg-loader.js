@@ -47,9 +47,13 @@ class SVGLoader {
         // Создаём растровое представление для определения заполнения
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
-        const resolution = 200; // Разрешение для сэмплирования
+        const resolution = 800; // Разрешение для сэмплирования (увеличено с 200 для лучшей точности)
         tempCanvas.width = resolution;
         tempCanvas.height = resolution;
+        
+        // Отключаем антиалиасинг для более четких границ
+        tempCtx.imageSmoothingEnabled = false;
+        tempCtx.imageSmoothingQuality = 'low';
         
         // Очищаем canvas белым цветом
         tempCtx.fillStyle = 'white';

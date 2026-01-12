@@ -44,7 +44,8 @@ class CanvasRenderer {
             gridType = 'square',
             gridOffsetX = 0,
             gridOffsetY = 0,
-            hoveredRow = null
+            hoveredRow = null,
+            fillThreshold = 0.75
         } = renderData;
         
         // Очистка
@@ -75,7 +76,8 @@ class CanvasRenderer {
             gridType,
             gridOffsetX,
             gridOffsetY,
-            hoveredRow
+            hoveredRow,
+            fillThreshold
         });
         
         // Выделение ряда при наведении
@@ -129,7 +131,8 @@ class CanvasRenderer {
             fileHeightMM,
             gridType = 'square',
             gridOffsetX = 0,
-            gridOffsetY = 0
+            gridOffsetY = 0,
+            fillThreshold = 0.75
         } = params;
         
         const ctx = this.ctx;
@@ -186,31 +189,60 @@ class CanvasRenderer {
                     continue;
                 }
                 
-                // Нормализованные координаты центра пикселя относительно рабочей области
-                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
-                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                // Вычисляем площадь пересечения бисеринки с фигурой
+                // Создаем сетку точек внутри бисеринки для подсчета процента заполнения
+                const sampleGridSize = 5; // Уменьшено с 10 до 5 (25 точек вместо 100) для производительности
+                let filledPoints = 0;
+                let totalPoints = 0;
                 
-                // Преобразуем координаты рабочей области в координаты файла
-                let fileX = workspaceX;
-                let fileY = workspaceY;
-                
-                if (hasLoadedFile && fileWidthMM && fileHeightMM) {
-                    // Преобразуем координаты рабочей области в координаты файла
-                    fileX = (workspaceX - offsetX) / scaleX;
-                    fileY = (workspaceY - offsetY) / scaleY;
-                    
-                    // Проверяем, находится ли пиксель в пределах файла
-                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
-                        // Пиксель вне файла - рисуем только границу
-                        ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
-                        ctx.lineWidth = 0.5;
-                        this.drawBead(ctx, x, y, pixelWidthPx, pixelHeightPx, gridType, false);
-                        continue;
+                for (let sy = 0; sy < sampleGridSize; sy++) {
+                    for (let sx = 0; sx < sampleGridSize; sx++) {
+                        // Координаты точки внутри бисеринки (от 0.05 до 0.95, чтобы не попадать на границы)
+                        const sampleOffsetX = 0.05 + (sx / (sampleGridSize - 1)) * 0.9;
+                        const sampleOffsetY = 0.05 + (sy / (sampleGridSize - 1)) * 0.9;
+                        
+                        // Нормализованные координаты точки относительно рабочей области
+                        const workspaceX = (x + pixelWidthPx * sampleOffsetX) / canvasWidth;
+                        const workspaceY = (y + pixelHeightPx * sampleOffsetY) / canvasHeight;
+                        
+                        // Преобразуем координаты рабочей области в координаты файла
+                        let fileX = workspaceX;
+                        let fileY = workspaceY;
+                        
+                        if (hasLoadedFile && fileWidthMM && fileHeightMM) {
+                            // Преобразуем координаты рабочей области в координаты файла
+                            // ИСПРАВЛЕНО: используем offsetX/offsetY (смещение файла), а не sampleOffsetX/Y
+                            fileX = (workspaceX - offsetX) / scaleX;
+                            fileY = (workspaceY - offsetY) / scaleY;
+                            
+                            // Пропускаем точки вне файла
+                            if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
+                                continue;
+                            }
+                        }
+                        
+                        totalPoints++;
+                        
+                        // Проверяем, заполнена ли точка (используем координаты файла)
+                        if (originalDrawing(fileX, fileY)) {
+                            filledPoints++;
+                        }
                     }
                 }
                 
-                // Проверяем, должен ли пиксель быть закрашен (используем координаты файла)
-                const isFilled = originalDrawing(fileX, fileY);
+                // Вычисляем процент заполнения
+                const fillPercentage = totalPoints > 0 ? filledPoints / totalPoints : 0;
+                
+                // Бисеринка считается заполненной, если процент заполнения >= порога
+                const isFilled = fillPercentage >= fillThreshold;
+                
+                // Если все точки вне файла, рисуем только границу
+                if (totalPoints === 0) {
+                    ctx.strokeStyle = 'rgba(0, 255, 157, 0.15)';
+                    ctx.lineWidth = 0.5;
+                    this.drawBead(ctx, x, y, pixelWidthPx, pixelHeightPx, gridType, false);
+                    continue;
+                }
                 
                 // Отрисовка бисеринки
                 this.drawBead(ctx, x, y, pixelWidthPx, pixelHeightPx, gridType, isFilled);

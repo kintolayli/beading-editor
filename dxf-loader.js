@@ -361,13 +361,17 @@ class DXFLoader {
     createDrawingFunction(entities, bbox) {
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
-        const resolution = 200;
+        const resolution = 800; // Увеличено с 200 для лучшей точности
 
         // Создаём временный canvas для растрового представления
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         tempCanvas.width = resolution;
         tempCanvas.height = resolution;
+
+        // Отключаем антиалиасинг для более четких границ
+        tempCtx.imageSmoothingEnabled = false;
+        tempCtx.imageSmoothingQuality = 'low';
 
         // Очищаем белым
         tempCtx.fillStyle = 'white';
@@ -477,9 +481,11 @@ class DXFLoader {
 
             const index = (y * resolution + x) * 4;
             const r = imageData.data[index];
+            const g = imageData.data[index + 1];
+            const b = imageData.data[index + 2];
 
-            // Считаем заполненным, если не белый
-            return r < 128;
+            // Считаем заполненным, если не белый (проверяем все каналы для надежности)
+            return r < 200 && g < 200 && b < 200;
         };
     }
 

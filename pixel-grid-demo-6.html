@@ -123,6 +123,22 @@
                             </div>
                         </div>
                         
+                        <div class="threshold-section">
+                            <label class="slider-label">Порог заполнения бисеринки</label>
+                            <div class="input-wrapper">
+                                <label class="input-label">Порог (%)</label>
+                                <input type="number" id="fillThresholdInput" class="dimension-input" min="0" max="100"
+                                    value="75" step="1">
+                                <input type="range" id="fillThresholdSlider" class="dimension-slider" min="0" max="100"
+                                    value="75" step="1">
+                            </div>
+                            <div class="slider-labels">
+                                <span>0%</span>
+                                <span class="stat-value" id="fillThresholdValue">75%</span>
+                                <span>100%</span>
+                            </div>
+                        </div>
+                        
                         <div class="upload-section">
                             <label for="fileUpload" class="upload-button">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none"

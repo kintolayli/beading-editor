@@ -20,6 +20,10 @@ class PixelGridDemo {
 
         // Масштаб для SVG файлов
         this.scale = 1.0;
+
+        // Порог заполнения бисеринки (0.0 - 1.0, по умолчанию 0.75 = 75%)
+        this.fillThreshold = 0.75;
+
         this.fileType = null; // 'svg' или 'dxf'
         this.hasLoadedFile = false;
 
@@ -71,6 +75,7 @@ class PixelGridDemo {
             onGridTypeChange: (type) => this.handleGridTypeChange(type),
             onGridOffsetXChange: (value) => this.handleGridOffsetXChange(value),
             onGridOffsetYChange: (value) => this.handleGridOffsetYChange(value),
+            onFillThresholdChange: (value) => this.handleFillThresholdChange(value),
             onSaveProject: () => this.saveProject(),
             onLoadProject: (file) => this.loadProject(file),
             onUpdateUI: () => this.updateUI()
@@ -200,6 +205,61 @@ class PixelGridDemo {
     }
 
     /**
+     * Вычисляет процент заполнения бисеринки фигурой
+     * @param {number} x - координата X бисеринки в пикселях
+     * @param {number} y - координата Y бисеринки в пикселях
+     * @param {number} pixelWidthPx - ширина бисеринки в пикселях
+     * @param {number} pixelHeightPx - высота бисеринки в пикселях
+     * @param {number} canvasWidth - ширина canvas
+     * @param {number} canvasHeight - высота canvas
+     * @param {number} scaleX - масштаб по X
+     * @param {number} scaleY - масштаб по Y
+     * @param {number} offsetX - смещение по X
+     * @param {number} offsetY - смещение по Y
+     * @returns {number} процент заполнения от 0 до 1
+     */
+    calculateBeadFillPercentage(x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY) {
+        const sampleGridSize = 5; // 5x5 = 25 точек для производительности
+        let filledPoints = 0;
+        let totalPoints = 0;
+
+        for (let sy = 0; sy < sampleGridSize; sy++) {
+            for (let sx = 0; sx < sampleGridSize; sx++) {
+                // Координаты точки внутри бисеринки (от 0.05 до 0.95, чтобы не попадать на границы)
+                const offsetX_local = 0.05 + (sx / (sampleGridSize - 1)) * 0.9;
+                const offsetY_local = 0.05 + (sy / (sampleGridSize - 1)) * 0.9;
+
+                // Нормализованные координаты точки относительно рабочей области
+                const workspaceX = (x + pixelWidthPx * offsetX_local) / canvasWidth;
+                const workspaceY = (y + pixelHeightPx * offsetY_local) / canvasHeight;
+
+                // Преобразуем координаты рабочей области в координаты файла
+                let fileX = workspaceX;
+                let fileY = workspaceY;
+
+                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+                    fileX = (workspaceX - offsetX) / scaleX;
+                    fileY = (workspaceY - offsetY) / scaleY;
+
+                    // Пропускаем точки вне файла
+                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
+                        continue;
+                    }
+                }
+
+                totalPoints++;
+
+                // Проверяем, заполнена ли точка
+                if (this.originalDrawing(fileX, fileY)) {
+                    filledPoints++;
+                }
+            }
+        }
+
+        return totalPoints > 0 ? filledPoints / totalPoints : 0;
+    }
+
+    /**
      * Подсчитывает количество бисеринок в ряду
      */
     countBeadsInRow(rowIndex) {
@@ -244,20 +304,11 @@ class PixelGridDemo {
 
                 if (x < 0 || x >= canvasWidth || y < 0 || y >= canvasHeight) continue;
 
-                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
-                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                const fillPercentage = this.calculateBeadFillPercentage(
+                    x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
+                );
 
-                let fileX = workspaceX;
-                let fileY = workspaceY;
-
-                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
-                    fileX = (workspaceX - offsetX) / scaleX;
-                    fileY = (workspaceY - offsetY) / scaleY;
-
-                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) continue;
-                }
-
-                if (this.originalDrawing(fileX, fileY)) {
+                if (fillPercentage >= this.fillThreshold) {
                     count++;
                 }
             }
@@ -273,20 +324,11 @@ class PixelGridDemo {
 
                 if (x < 0 || x >= canvasWidth || y < 0 || y >= canvasHeight) continue;
 
-                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
-                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                const fillPercentage = this.calculateBeadFillPercentage(
+                    x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
+                );
 
-                let fileX = workspaceX;
-                let fileY = workspaceY;
-
-                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
-                    fileX = (workspaceX - offsetX) / scaleX;
-                    fileY = (workspaceY - offsetY) / scaleY;
-
-                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) continue;
-                }
-
-                if (this.originalDrawing(fileX, fileY)) {
+                if (fillPercentage >= this.fillThreshold) {
                     count++;
                 }
             }
@@ -520,6 +562,11 @@ class PixelGridDemo {
         this.render();
     }
 
+    handleFillThresholdChange(value) {
+        this.fillThreshold = value;
+        this.render();
+    }
+
     handleScaleChange(value) {
         // Масштабирование применяется только для SVG файлов
         if (this.fileType !== 'svg') {
@@ -643,25 +690,13 @@ class PixelGridDemo {
                 const x = col * pixelWidthPx + offsetPxX + gridOffsetPxX;
                 const y = row * pixelHeightPx + offsetPxY + gridOffsetPxY;
 
-                // Нормализованные координаты центра
-                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
-                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                // Вычисляем процент заполнения бисеринки
+                const fillPercentage = this.calculateBeadFillPercentage(
+                    x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
+                );
 
-                // Преобразуем в координаты файла
-                let fileX = workspaceX;
-                let fileY = workspaceY;
-
-                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
-                    fileX = (workspaceX - offsetX) / scaleX;
-                    fileY = (workspaceY - offsetY) / scaleY;
-
-                    // Пропускаем бисеринки вне файла
-                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
-                        continue;
-                    }
-                }
-
-                if (this.originalDrawing(fileX, fileY)) {
+                // Бисеринка считается заполненной, если процент заполнения >= порога
+                if (fillPercentage >= this.fillThreshold) {
                     count++;
                 }
             }
@@ -689,7 +724,8 @@ class PixelGridDemo {
             gridType: this.gridType,
             gridOffsetX: this.gridOffsetX,
             gridOffsetY: this.gridOffsetY,
-            hoveredRow: this.hoveredRow
+            hoveredRow: this.hoveredRow,
+            fillThreshold: this.fillThreshold
         });
 
         // Обновляем статистику после рендеринга
@@ -743,6 +779,7 @@ class PixelGridDemo {
                 gridOffsetX: this.gridOffsetX,
                 gridOffsetY: this.gridOffsetY,
                 scale: this.scale,
+                fillThreshold: this.fillThreshold,
                 fileType: this.fileType,
                 hasLoadedFile: this.hasLoadedFile,
                 fileWidthMM: this.fileWidthMM,
@@ -792,6 +829,7 @@ class PixelGridDemo {
             this.gridOffsetX = projectData.gridOffsetX || 0;
             this.gridOffsetY = projectData.gridOffsetY || 0;
             this.scale = projectData.scale || 1.0;
+            this.fillThreshold = projectData.fillThreshold !== undefined ? projectData.fillThreshold : 0.75;
 
             // Восстанавливаем данные файла
             this.fileType = projectData.fileType;
@@ -840,6 +878,7 @@ class PixelGridDemo {
             this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
             this.uiController.setActiveGridType(this.gridType);
             this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
+            this.uiController.updateFillThreshold(this.fillThreshold);
             if (this.fileType === 'svg') {
                 this.uiController.showScaleSection(true);
                 this.uiController.updateScale(this.scale);

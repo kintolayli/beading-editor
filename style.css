@@ -423,21 +423,24 @@ input[type="range"]::-moz-range-track {
     padding: 0.75rem;
 }
 
-.scale-section {
+.scale-section,
+.threshold-section {
     background: rgba(0, 212, 255, 0.05);
     border: 1px solid rgba(0, 212, 255, 0.15);
     border-radius: 6px;
     padding: 0.75rem;
 }
 
-.scale-section .slider-labels {
+.scale-section .slider-labels,
+.threshold-section .slider-labels {
     display: grid;
     grid-template-columns: auto 1fr auto;
     gap: 0.5rem;
     align-items: center;
 }
 
-.scale-section .slider-labels .stat-value {
+.scale-section .slider-labels .stat-value,
+.threshold-section .slider-labels .stat-value {
     text-align: center;
 }
 

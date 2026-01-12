@@ -30,6 +30,8 @@ class UIController {
         this.gridOffsetYInput = document.getElementById('gridOffsetY');
         this.gridOffsetXSlider = document.getElementById('gridOffsetXSlider');
         this.gridOffsetYSlider = document.getElementById('gridOffsetYSlider');
+        this.fillThresholdInput = document.getElementById('fillThresholdInput');
+        this.fillThresholdSlider = document.getElementById('fillThresholdSlider');
         
         this.initialize();
     }
@@ -214,12 +216,41 @@ class UIController {
             }
         });
         
+        // Обработчики для порога заполнения
+        if (this.fillThresholdInput && this.fillThresholdSlider) {
+            this.fillThresholdInput.addEventListener('blur', () => {
+                const value = Math.max(0, Math.min(100, parseFloat(this.fillThresholdInput.value) || 75));
+                this.fillThresholdInput.value = value;
+                this.fillThresholdSlider.value = value;
+                updateSliderProgress(this.fillThresholdSlider);
+                document.getElementById('fillThresholdValue').textContent = `${Math.round(value)}%`;
+                if (this.callbacks.onFillThresholdChange) {
+                    this.callbacks.onFillThresholdChange(value / 100);
+                }
+            });
+            this.fillThresholdInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') this.fillThresholdInput.blur();
+            });
+            this.fillThresholdSlider.addEventListener('input', (e) => {
+                const value = parseFloat(e.target.value);
+                this.fillThresholdInput.value = value;
+                document.getElementById('fillThresholdValue').textContent = `${Math.round(value)}%`;
+                updateSliderProgress(this.fillThresholdSlider);
+                if (this.callbacks.onFillThresholdChange) {
+                    this.callbacks.onFillThresholdChange(value / 100);
+                }
+            });
+        }
+        
         // Инициализация прогресса ползунков
         updateSliderProgress(this.widthSlider);
         updateSliderProgress(this.heightSlider);
         updateSliderProgress(this.scaleSlider);
         updateSliderProgress(this.gridOffsetXSlider);
         updateSliderProgress(this.gridOffsetYSlider);
+        if (this.fillThresholdSlider) {
+            updateSliderProgress(this.fillThresholdSlider);
+        }
     }
     
     /**
@@ -314,6 +345,23 @@ class UIController {
         const max = parseFloat(this.scaleSlider.max);
         const progress = ((scale - min) / (max - min)) * 100;
         this.scaleSlider.style.setProperty('--slider-progress', `${progress}%`);
+    }
+    
+    /**
+     * Обновляет значение порога заполнения
+     * @param {number} threshold - порог заполнения (0.0 - 1.0)
+     */
+    updateFillThreshold(threshold) {
+        if (this.fillThresholdInput && this.fillThresholdSlider) {
+            const value = Math.round(threshold * 100);
+            this.fillThresholdInput.value = value;
+            this.fillThresholdSlider.value = value;
+            document.getElementById('fillThresholdValue').textContent = `${value}%`;
+            const min = parseFloat(this.fillThresholdSlider.min);
+            const max = parseFloat(this.fillThresholdSlider.max);
+            const progress = ((value - min) / (max - min)) * 100;
+            this.fillThresholdSlider.style.setProperty('--slider-progress', `${progress}%`);
+        }
     }
     
     /**
