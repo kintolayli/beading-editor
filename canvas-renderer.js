@@ -420,7 +420,7 @@ class CanvasRenderer {
         
         if (!hoveredBead) return;
         
-        const { row, col, isFilled } = hoveredBead;
+        const { row, col } = hoveredBead;
         
         const ctx = this.ctx;
         ctx.save();
@@ -445,10 +445,10 @@ class CanvasRenderer {
         const cornerRadius = Math.min(pixelWidthPx, pixelHeightPx) * 0.2;
         const padding = 2;
         
-        // Рисуем выделение бисеринки
-        ctx.strokeStyle = isFilled ? '#ffffff' : '#ff6b6b';
+        // Рисуем выделение бисеринки (только для заполненных)
+        ctx.strokeStyle = '#ffffff';
         ctx.lineWidth = 3;
-        ctx.shadowColor = isFilled ? '#ffffff' : '#ff6b6b';
+        ctx.shadowColor = '#ffffff';
         ctx.shadowBlur = 8;
         
         // Скруглённый прямоугольник

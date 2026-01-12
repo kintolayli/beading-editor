@@ -201,16 +201,21 @@ class PixelGridDemo {
         }
 
         // Определяем, заполнена ли бисеринка
+        // Показываем выделение только для заполненных бисеринок
         let newHoveredBead = null;
         if (beadRow !== null && beadCol !== null) {
             const isFilled = this.isBeadFilled(beadRow, beadCol);
-            newHoveredBead = { row: beadRow, col: beadCol, isFilled };
+            // Устанавливаем hoveredBead только если бисеринка заполнена
+            if (isFilled) {
+                newHoveredBead = { row: beadRow, col: beadCol, isFilled: true };
+            }
         }
 
         // Проверяем, изменилась ли выбранная бисеринка
         const beadChanged = !this.hoveredBead || !newHoveredBead ||
-            this.hoveredBead.row !== newHoveredBead?.row ||
-            this.hoveredBead.col !== newHoveredBead?.col;
+            (this.hoveredBead && newHoveredBead &&
+                (this.hoveredBead.row !== newHoveredBead.row ||
+                    this.hoveredBead.col !== newHoveredBead.col));
 
         if (this.hoveredRow !== rowIndex || beadChanged) {
             this.hoveredRow = rowIndex;
@@ -433,13 +438,12 @@ class PixelGridDemo {
         const rowType = this.gridType === 'peyote' ? 'столбец' : 'строка';
         const rowNumber = this.hoveredRow !== null ? this.hoveredRow + 1 : 0;
 
-        // Информация о бисеринке
+        // Информация о бисеринке (показываем только для заполненных)
         let beadInfo = '';
         if (this.hoveredBead) {
             const beadRow = this.hoveredBead.row + 1;
             const beadCol = this.hoveredBead.col + 1;
-            const status = this.hoveredBead.isFilled ? '●' : '○';
-            beadInfo = `<div class="row-overlay-bead">${status} Бисеринка [${beadCol}, ${beadRow}]</div>`;
+            beadInfo = `<div class="row-overlay-bead">● Бисеринка [${beadCol}, ${beadRow}]</div>`;
         }
 
         const overlay = document.getElementById('rowOverlayInfo');
