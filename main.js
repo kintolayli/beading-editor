@@ -21,8 +21,9 @@ class PixelGridDemo {
         // Масштаб для SVG файлов
         this.scale = 1.0;
 
-        // Порог заполнения бисеринки (0.0 - 1.0, по умолчанию 0.75 = 75%)
-        this.fillThreshold = 0.75;
+        // Порог заполнения бисеринки (0.0 - 1.0)
+        // При инвертированной UI логике: 0.25 внутри = 75% в UI
+        this.fillThreshold = 0.25;
 
         this.fileType = null; // 'svg' или 'dxf'
         this.hasLoadedFile = false;
@@ -563,7 +564,9 @@ class PixelGridDemo {
     }
 
     handleFillThresholdChange(value) {
-        this.fillThreshold = value;
+        // Инвертируем логику: 100% чувствительности = 0% порога (показать все)
+        // 0% чувствительности = 100% порога (только полные)
+        this.fillThreshold = 1 - value;
         this.updateUI();
         this.render();
     }

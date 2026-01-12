@@ -403,7 +403,8 @@ class UIController {
      */
     updateFillThreshold(threshold) {
         if (this.fillThresholdInput && this.fillThresholdSlider) {
-            const value = Math.round(threshold * 100);
+            // Инвертируем для отображения: внутренний порог 0.25 = UI 75%
+            const value = Math.round((1 - threshold) * 100);
             this.fillThresholdInput.value = value;
             this.fillThresholdSlider.value = value;
             document.getElementById('fillThresholdValue').textContent = `${value}%`;
