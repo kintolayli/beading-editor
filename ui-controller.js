@@ -32,10 +32,10 @@ class UIController {
         this.gridOffsetYSlider = document.getElementById('gridOffsetYSlider');
         this.fillThresholdInput = document.getElementById('fillThresholdInput');
         this.fillThresholdSlider = document.getElementById('fillThresholdSlider');
-        
+
         this.initialize();
     }
-    
+
     /**
      * Инициализирует обработчики событий
      */
@@ -47,64 +47,64 @@ class UIController {
             const progress = ((value - min) / (max - min)) * 100;
             slider.style.setProperty('--slider-progress', `${progress}%`);
         };
-        
+
         // Обработчики для ширины пикселя
         this.widthInput.addEventListener('blur', () => {
             const value = this.clampPixelSize(parseFloat(this.widthInput.value));
             this.callbacks.onPixelWidthChange(value);
         });
-        
+
         this.widthInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.widthInput.blur();
             }
         });
-        
+
         this.widthSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             this.callbacks.onPixelWidthChange(value);
         });
-        
+
         // Обработчики для высоты пикселя
         this.heightInput.addEventListener('blur', () => {
             const value = this.clampPixelSize(parseFloat(this.heightInput.value));
             this.callbacks.onPixelHeightChange(value);
         });
-        
+
         this.heightInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.heightInput.blur();
             }
         });
-        
+
         this.heightSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             this.callbacks.onPixelHeightChange(value);
         });
-        
+
         // Обработчики для размеров рабочей области
         this.workspaceWidthInput.addEventListener('blur', () => {
             const value = this.clampWorkspaceSize(parseFloat(this.workspaceWidthInput.value));
             this.callbacks.onWorkspaceWidthChange(value);
         });
-        
+
         this.workspaceWidthInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.workspaceWidthInput.blur();
             }
         });
-        
+
         this.workspaceHeightInput.addEventListener('blur', () => {
             const value = this.clampWorkspaceSize(parseFloat(this.workspaceHeightInput.value));
             this.callbacks.onWorkspaceHeightChange(value);
         });
-        
+
         this.workspaceHeightInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.workspaceHeightInput.blur();
             }
         });
-        
+
         // Обработчик для масштаба (только для SVG)
         this.scaleSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
@@ -114,21 +114,21 @@ class UIController {
                 this.callbacks.onScaleChange(value);
             }
         });
-        
+
         // Обработчик для загрузки файла
         this.fileUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (!file) return;
-            
+
             const extension = file.name.split('.').pop().toLowerCase();
-            
+
             if (extension === 'svg' || extension === 'dxf') {
                 this.callbacks.onFileUpload(file, extension);
             } else {
                 alert('Пожалуйста, выберите SVG или DXF файл');
             }
         });
-        
+
         // Обработчик для сохранения проекта
         if (this.saveProjectBtn) {
             this.saveProjectBtn.addEventListener('click', () => {
@@ -137,15 +137,15 @@ class UIController {
                 }
             });
         }
-        
+
         // Обработчик для загрузки проекта
         if (this.loadProjectBtn) {
             this.loadProjectBtn.addEventListener('change', (e) => {
                 const file = e.target.files[0];
                 if (!file) return;
-                
+
                 const extension = file.name.split('.').pop().toLowerCase();
-                
+
                 if (extension === 'beading' || extension === 'json') {
                     if (this.callbacks.onLoadProject) {
                         this.callbacks.onLoadProject(file);
@@ -153,12 +153,12 @@ class UIController {
                 } else {
                     alert('Пожалуйста, выберите файл проекта (.beading или .json)');
                 }
-                
+
                 // Сбрасываем значение input, чтобы можно было загрузить тот же файл снова
                 e.target.value = '';
             });
         }
-        
+
         // Обработчики для кнопок выбора типа сетки
         this.gridTypeButtons.forEach(btn => {
             btn.addEventListener('click', () => {
@@ -169,7 +169,7 @@ class UIController {
                 }
             });
         });
-        
+
         // Обработчики для смещения сетки по X
         this.gridOffsetXInput.addEventListener('blur', () => {
             const value = this.clampOffset(parseFloat(this.gridOffsetXInput.value));
@@ -177,13 +177,13 @@ class UIController {
                 this.callbacks.onGridOffsetXChange(value);
             }
         });
-        
+
         this.gridOffsetXInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.gridOffsetXInput.blur();
             }
         });
-        
+
         this.gridOffsetXSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             this.gridOffsetXInput.value = value.toFixed(1);
@@ -192,7 +192,7 @@ class UIController {
                 this.callbacks.onGridOffsetXChange(value);
             }
         });
-        
+
         // Обработчики для смещения сетки по Y
         this.gridOffsetYInput.addEventListener('blur', () => {
             const value = this.clampOffset(parseFloat(this.gridOffsetYInput.value));
@@ -200,13 +200,13 @@ class UIController {
                 this.callbacks.onGridOffsetYChange(value);
             }
         });
-        
+
         this.gridOffsetYInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 this.gridOffsetYInput.blur();
             }
         });
-        
+
         this.gridOffsetYSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
             this.gridOffsetYInput.value = value.toFixed(1);
@@ -215,7 +215,7 @@ class UIController {
                 this.callbacks.onGridOffsetYChange(value);
             }
         });
-        
+
         // Обработчики для порога заполнения
         if (this.fillThresholdInput && this.fillThresholdSlider) {
             this.fillThresholdInput.addEventListener('blur', () => {
@@ -237,11 +237,23 @@ class UIController {
                 document.getElementById('fillThresholdValue').textContent = `${Math.round(value)}%`;
                 updateSliderProgress(this.fillThresholdSlider);
                 if (this.callbacks.onFillThresholdChange) {
+                    // Вызываем колбэк с значением от 0 до 1
+                    this.callbacks.onFillThresholdChange(value / 100);
+                }
+            });
+
+            // Также обрабатываем изменение через input для немедленного обновления
+            this.fillThresholdInput.addEventListener('input', (e) => {
+                const value = Math.max(0, Math.min(100, parseFloat(e.target.value) || 75));
+                this.fillThresholdSlider.value = value;
+                document.getElementById('fillThresholdValue').textContent = `${Math.round(value)}%`;
+                updateSliderProgress(this.fillThresholdSlider);
+                if (this.callbacks.onFillThresholdChange) {
                     this.callbacks.onFillThresholdChange(value / 100);
                 }
             });
         }
-        
+
         // Инициализация прогресса ползунков
         updateSliderProgress(this.widthSlider);
         updateSliderProgress(this.heightSlider);
@@ -252,7 +264,7 @@ class UIController {
             updateSliderProgress(this.fillThresholdSlider);
         }
     }
-    
+
     /**
      * Устанавливает активный тип сетки
      * @param {string} gridType - тип сетки ('square', 'peyote', 'brick')
@@ -266,7 +278,7 @@ class UIController {
             }
         });
     }
-    
+
     /**
      * Обновляет отображение UI
      * @param {Object} data - данные для отображения
@@ -281,15 +293,15 @@ class UIController {
             gridHeight,
             filledBeads
         } = data;
-        
-        document.getElementById('pixelDimensionsDisplay').textContent = 
+
+        document.getElementById('pixelDimensionsDisplay').textContent =
             `${pixelWidthMM.toFixed(1)} × ${pixelHeightMM.toFixed(1)} мм`;
         document.getElementById('gridSize').textContent = `${gridWidth}×${gridHeight}`;
         document.getElementById('totalPixels').textContent = filledBeads.toLocaleString('ru-RU');
-        document.getElementById('workspaceSize').textContent = 
+        document.getElementById('workspaceSize').textContent =
             `${workspaceWidthMM.toFixed(1)}×${workspaceHeightMM.toFixed(1)} мм`;
     }
-    
+
     /**
      * Обновляет значения полей ввода пикселей
      * @param {number} width - ширина пикселя
@@ -298,7 +310,7 @@ class UIController {
     updatePixelInputs(width, height) {
         this.widthInput.value = width.toFixed(1);
         this.heightInput.value = height.toFixed(1);
-        
+
         if (width >= parseFloat(this.widthSlider.min) && width <= parseFloat(this.widthSlider.max)) {
             this.widthSlider.value = width;
             const min = parseFloat(this.widthSlider.min);
@@ -306,7 +318,7 @@ class UIController {
             const progress = ((width - min) / (max - min)) * 100;
             this.widthSlider.style.setProperty('--slider-progress', `${progress}%`);
         }
-        
+
         if (height >= parseFloat(this.heightSlider.min) && height <= parseFloat(this.heightSlider.max)) {
             this.heightSlider.value = height;
             const min = parseFloat(this.heightSlider.min);
@@ -315,7 +327,7 @@ class UIController {
             this.heightSlider.style.setProperty('--slider-progress', `${progress}%`);
         }
     }
-    
+
     /**
      * Обновляет значения полей ввода рабочей области
      * @param {number} width - ширина рабочей области
@@ -325,7 +337,7 @@ class UIController {
         this.workspaceWidthInput.value = width.toFixed(1);
         this.workspaceHeightInput.value = height.toFixed(1);
     }
-    
+
     /**
      * Показывает/скрывает секцию масштаба
      * @param {boolean} show - показывать ли секцию
@@ -333,7 +345,7 @@ class UIController {
     showScaleSection(show) {
         document.getElementById('scaleSection').style.display = show ? 'block' : 'none';
     }
-    
+
     /**
      * Обновляет значение масштаба
      * @param {number} scale - значение масштаба
@@ -346,7 +358,7 @@ class UIController {
         const progress = ((scale - min) / (max - min)) * 100;
         this.scaleSlider.style.setProperty('--slider-progress', `${progress}%`);
     }
-    
+
     /**
      * Обновляет значение порога заполнения
      * @param {number} threshold - порог заполнения (0.0 - 1.0)
@@ -363,7 +375,7 @@ class UIController {
             this.fillThresholdSlider.style.setProperty('--slider-progress', `${progress}%`);
         }
     }
-    
+
     /**
      * Обновляет информацию о загруженном файле
      * @param {string} fileName - имя файла
@@ -371,10 +383,10 @@ class UIController {
      * @param {number} height - высота файла в мм
      */
     updateFileInfo(fileName, width, height) {
-        document.getElementById('uploadInfo').textContent = 
+        document.getElementById('uploadInfo').textContent =
             `Загружен: ${fileName} (${width.toFixed(1)}×${height.toFixed(1)} мм)`;
     }
-    
+
     /**
      * Валидация размера пикселя
      * @param {number} value - значение
@@ -386,7 +398,7 @@ class UIController {
         const max = 50;
         return Math.min(Math.max(value, min), max);
     }
-    
+
     /**
      * Валидация размера рабочей области
      * @param {number} value - значение
@@ -398,7 +410,7 @@ class UIController {
         const max = 1000;
         return Math.min(Math.max(value, min), max);
     }
-    
+
     /**
      * Валидация смещения сетки
      * @param {number} value - значение
@@ -410,7 +422,7 @@ class UIController {
         const max = 50;
         return Math.min(Math.max(value, min), max);
     }
-    
+
     /**
      * Обновляет значения смещения сетки
      * @param {number} offsetX - смещение по X
@@ -419,7 +431,7 @@ class UIController {
     updateGridOffsetInputs(offsetX, offsetY) {
         this.gridOffsetXInput.value = offsetX.toFixed(1);
         this.gridOffsetYInput.value = offsetY.toFixed(1);
-        
+
         if (offsetX >= parseFloat(this.gridOffsetXSlider.min) && offsetX <= parseFloat(this.gridOffsetXSlider.max)) {
             this.gridOffsetXSlider.value = offsetX;
             const min = parseFloat(this.gridOffsetXSlider.min);
@@ -427,7 +439,7 @@ class UIController {
             const progress = ((offsetX - min) / (max - min)) * 100;
             this.gridOffsetXSlider.style.setProperty('--slider-progress', `${progress}%`);
         }
-        
+
         if (offsetY >= parseFloat(this.gridOffsetYSlider.min) && offsetY <= parseFloat(this.gridOffsetYSlider.max)) {
             this.gridOffsetYSlider.value = offsetY;
             const min = parseFloat(this.gridOffsetYSlider.min);

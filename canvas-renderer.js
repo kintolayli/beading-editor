@@ -224,7 +224,8 @@ class CanvasRenderer {
                         totalPoints++;
                         
                         // Проверяем, заполнена ли точка (используем координаты файла)
-                        if (originalDrawing(fileX, fileY)) {
+                        const isFilled = originalDrawing(fileX, fileY);
+                        if (isFilled) {
                             filledPoints++;
                         }
                     }
@@ -234,7 +235,11 @@ class CanvasRenderer {
                 const fillPercentage = totalPoints > 0 ? filledPoints / totalPoints : 0;
                 
                 // Бисеринка считается заполненной, если процент заполнения >= порога
-                const isFilled = fillPercentage >= fillThreshold;
+                // Для порога 0 требуется fillPercentage > 0 (хотя бы частичное заполнение)
+                // Для других порогов используем точное сравнение
+                const isFilled = fillThreshold === 0 
+                    ? fillPercentage > 0 
+                    : fillPercentage >= fillThreshold;
                 
                 // Если все точки вне файла, рисуем только границу
                 if (totalPoints === 0) {

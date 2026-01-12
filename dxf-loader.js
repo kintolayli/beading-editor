@@ -25,13 +25,13 @@ class DXFLoader {
 
         // Находим bounding box всех объектов
         const bbox = this.calculateBoundingBox(dxfData.entities);
-        
+
         // Проверяем на Infinity и NaN
-        if (!isFinite(bbox.minX) || !isFinite(bbox.minY) || 
+        if (!isFinite(bbox.minX) || !isFinite(bbox.minY) ||
             !isFinite(bbox.maxX) || !isFinite(bbox.maxY)) {
             throw new Error('Некорректные размеры объектов в DXF (Infinity или NaN)');
         }
-        
+
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
 
@@ -64,7 +64,7 @@ class DXFLoader {
 
         entities.forEach(entity => {
             if (entity.type === 'LINE') {
-                if (entity.x1 !== undefined && entity.y1 !== undefined && 
+                if (entity.x1 !== undefined && entity.y1 !== undefined &&
                     entity.x2 !== undefined && entity.y2 !== undefined &&
                     isFinite(entity.x1) && isFinite(entity.y1) &&
                     isFinite(entity.x2) && isFinite(entity.y2)) {
@@ -75,7 +75,7 @@ class DXFLoader {
                     hasValidEntity = true;
                 }
             } else if (entity.type === 'CIRCLE') {
-                if (entity.cx !== undefined && entity.cy !== undefined && 
+                if (entity.cx !== undefined && entity.cy !== undefined &&
                     entity.radius !== undefined &&
                     isFinite(entity.cx) && isFinite(entity.cy) && isFinite(entity.radius)) {
                     minX = Math.min(minX, entity.cx - entity.radius);
@@ -86,15 +86,15 @@ class DXFLoader {
                 }
             } else if (entity.type === 'ARC') {
                 // Проверяем, что дуга имеет валидные параметры
-                if (entity.cx !== undefined && entity.cy !== undefined && 
-                    entity.radius !== undefined && entity.startAngle !== undefined && 
+                if (entity.cx !== undefined && entity.cy !== undefined &&
+                    entity.radius !== undefined && entity.startAngle !== undefined &&
                     entity.endAngle !== undefined &&
-                    isFinite(entity.cx) && isFinite(entity.cy) && 
-                    isFinite(entity.radius) && isFinite(entity.startAngle) && 
+                    isFinite(entity.cx) && isFinite(entity.cy) &&
+                    isFinite(entity.radius) && isFinite(entity.startAngle) &&
                     isFinite(entity.endAngle) && entity.radius > 0) {
                     // Вычисляем bounding box для дуги
                     const arcBbox = this.calculateArcBoundingBox(entity);
-                    if (isFinite(arcBbox.minX) && isFinite(arcBbox.minY) && 
+                    if (isFinite(arcBbox.minX) && isFinite(arcBbox.minY) &&
                         isFinite(arcBbox.maxX) && isFinite(arcBbox.maxY)) {
                         minX = Math.min(minX, arcBbox.minX);
                         minY = Math.min(minY, arcBbox.minY);
@@ -106,7 +106,7 @@ class DXFLoader {
             } else if (entity.type === 'POLYLINE' || entity.type === 'LWPOLYLINE') {
                 if (entity.vertices && entity.vertices.length > 0) {
                     entity.vertices.forEach(v => {
-                        if (v.x !== undefined && v.y !== undefined && 
+                        if (v.x !== undefined && v.y !== undefined &&
                             isFinite(v.x) && isFinite(v.y)) {
                             minX = Math.min(minX, v.x);
                             minY = Math.min(minY, v.y);
@@ -118,9 +118,9 @@ class DXFLoader {
                 }
             } else if (entity.type === 'ELLIPSE') {
                 // Упрощенный bounding box для эллипса
-                if (entity.centerX !== undefined && entity.centerY !== undefined && 
+                if (entity.centerX !== undefined && entity.centerY !== undefined &&
                     entity.majorAxisLength !== undefined &&
-                    isFinite(entity.centerX) && isFinite(entity.centerY) && 
+                    isFinite(entity.centerX) && isFinite(entity.centerY) &&
                     isFinite(entity.majorAxisLength)) {
                     minX = Math.min(minX, entity.centerX - entity.majorAxisLength);
                     minY = Math.min(minY, entity.centerY - entity.majorAxisLength);
@@ -132,7 +132,7 @@ class DXFLoader {
                 // Bounding box для сплайна по контрольным точкам
                 if (entity.controlPoints && entity.controlPoints.length > 0) {
                     entity.controlPoints.forEach(p => {
-                        if (p.x !== undefined && p.y !== undefined && 
+                        if (p.x !== undefined && p.y !== undefined &&
                             isFinite(p.x) && isFinite(p.y)) {
                             minX = Math.min(minX, p.x);
                             minY = Math.min(minY, p.y);
@@ -317,14 +317,14 @@ class DXFLoader {
         // Вычисляем длину дуги (против часовой стрелки)
         let arcLength = endRad - startRad;
         if (arcLength < 0) arcLength += 2 * Math.PI;
-        
+
         // Если дуга очень маленькая или нулевая, делаем минимальную длину
         if (arcLength < 0.001) {
             arcLength = 2 * Math.PI; // Полная окружность
         }
 
         const numSteps = Math.max(steps, Math.floor(arcLength * 30 / (2 * Math.PI)));
-        
+
         // Минимум 2 точки для любой дуги
         const actualSteps = Math.max(2, numSteps);
 
@@ -458,24 +458,67 @@ class DXFLoader {
             tempCtx.fill();
         }
 
-        const polyline = entities.find(e => (e.type === 'POLYLINE' || e.type === 'LWPOLYLINE') && e.closed);
-        if (polyline) {
-            tempCtx.beginPath();
-            polyline.vertices.forEach((v, i) => {
-                const x = (v.x - bbox.minX) / width * resolution;
-                const y = (v.y - bbox.minY) / height * resolution;
-                if (i === 0) {
-                    tempCtx.moveTo(x, y);
-                } else {
-                    tempCtx.lineTo(x, y);
-                }
-            });
-            tempCtx.closePath();
-            tempCtx.fill();
-        }
+        // Обрабатываем полилинии (замкнутые и незамкнутые)
+        const polylines = entities.filter(e => e.type === 'POLYLINE' || e.type === 'LWPOLYLINE');
+        let hasPolylines = false;
 
-        // Собираем все сегменты и создаем замкнутый контур
-        const segments = this.extractSegments(entities);
+        polylines.forEach((polyline, polyIdx) => {
+            if (polyline.vertices && polyline.vertices.length > 0) {
+                hasPolylines = true;
+                tempCtx.beginPath();
+                let firstX = null, firstY = null;
+                let minCanvasX = Infinity, minCanvasY = Infinity, maxCanvasX = -Infinity, maxCanvasY = -Infinity;
+
+                // Рисуем вершины в правильном порядке
+                // Нормализуем координаты относительно bbox, затем масштабируем на resolution
+                polyline.vertices.forEach((v, i) => {
+                    // Нормализуем координаты от 0 до 1 относительно bbox
+                    const normalizedX = (v.x - bbox.minX) / width;
+                    const normalizedY = (v.y - bbox.minY) / height;
+
+                    // Масштабируем на resolution
+                    const x = normalizedX * resolution;
+                    const y = normalizedY * resolution;
+
+                    minCanvasX = Math.min(minCanvasX, x);
+                    minCanvasY = Math.min(minCanvasY, y);
+                    maxCanvasX = Math.max(maxCanvasX, x);
+                    maxCanvasY = Math.max(maxCanvasY, y);
+
+                    if (i === 0) {
+                        firstX = x;
+                        firstY = y;
+                        tempCtx.moveTo(x, y);
+                    } else {
+                        tempCtx.lineTo(x, y);
+                    }
+                });
+                // Закрываем контур только если полилиния помечена как замкнутая
+                if (polyline.closed) {
+                    // Проверяем, что контур действительно замкнут (первая и последняя точки близки)
+                    const lastV = polyline.vertices[polyline.vertices.length - 1];
+                    const firstV = polyline.vertices[0];
+                    const dist = Math.sqrt(Math.pow(lastV.x - firstV.x, 2) + Math.pow(lastV.y - firstV.y, 2));
+                    if (dist > 0.001) {
+                        // Если первая и последняя точки не совпадают, замыкаем контур
+                        if (firstX !== null && firstY !== null) {
+                            tempCtx.lineTo(firstX, firstY);
+                        }
+                    }
+                    tempCtx.closePath();
+                }
+                // Используем fill для заполнения области (только для замкнутых контуров)
+                if (polyline.closed) {
+                    tempCtx.fill();
+                }
+                // Рисуем обводку для всех полилиний
+                tempCtx.stroke();
+            }
+        });
+
+        // Собираем все сегменты и создаем замкнутый контур (только если нет полилиний)
+        // Полилинии уже обработаны выше
+        const segments = hasPolylines ? [] : this.extractSegments(entities);
 
         if (segments.length > 0) {
             const orderedSegments = this.orderSegments(segments);
@@ -535,6 +578,7 @@ class DXFLoader {
 
         // Создаём функцию проверки заполнения
         const imageData = tempCtx.getImageData(0, 0, resolution, resolution);
+
         return (normalizedX, normalizedY) => {
             const x = Math.floor(normalizedX * resolution);
             const y = Math.floor(normalizedY * resolution);
@@ -706,9 +750,7 @@ class DXFLoader {
                 }
                 if (code === '20' && currentVertex.x !== undefined) {
                     currentVertex.y = parseFloat(value);
-                    // Сохраняем вершину после получения Y
-                    vertices.push({ ...currentVertex });
-                    currentVertex = {};
+                    // Вершина готова, но не сохраняем здесь - сохраним при следующем code 10 или в конце
                 }
                 if (code === '70') {
                     const flags = parseInt(value, 10);

@@ -299,7 +299,11 @@ class PixelGridDemo {
                     x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
                 );
 
-                if (fillPercentage >= this.fillThreshold) {
+                // Для порога 0 требуется fillPercentage > 0
+                const isFilled = this.fillThreshold === 0
+                    ? fillPercentage > 0
+                    : fillPercentage >= this.fillThreshold;
+                if (isFilled) {
                     count++;
                 }
             }
@@ -319,7 +323,11 @@ class PixelGridDemo {
                     x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
                 );
 
-                if (fillPercentage >= this.fillThreshold) {
+                // Для порога 0 требуется fillPercentage > 0
+                const isFilled = this.fillThreshold === 0
+                    ? fillPercentage > 0
+                    : fillPercentage >= this.fillThreshold;
+                if (isFilled) {
                     count++;
                 }
             }
@@ -555,6 +563,7 @@ class PixelGridDemo {
 
     handleFillThresholdChange(value) {
         this.fillThreshold = value;
+        this.updateUI();
         this.render();
     }
 
@@ -687,7 +696,11 @@ class PixelGridDemo {
                 );
 
                 // Бисеринка считается заполненной, если процент заполнения >= порога
-                if (fillPercentage >= this.fillThreshold) {
+                // Для порога 0 требуется fillPercentage > 0 (хотя бы частичное заполнение)
+                const isFilled = this.fillThreshold === 0
+                    ? fillPercentage > 0
+                    : fillPercentage >= this.fillThreshold;
+                if (isFilled) {
                     count++;
                 }
             }
