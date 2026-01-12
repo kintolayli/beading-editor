@@ -208,7 +208,7 @@ class CanvasRenderer {
                 
                 // Вычисляем площадь пересечения бисеринки с фигурой
                 // Создаем сетку точек внутри бисеринки для подсчета процента заполнения
-                const sampleGridSize = 5; // Уменьшено с 10 до 5 (25 точек вместо 100) для производительности
+                const sampleGridSize = SAMPLE_GRID_SIZE;
                 let filledPoints = 0;
                 let totalPoints = 0;
                 

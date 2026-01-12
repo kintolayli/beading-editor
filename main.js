@@ -1,15 +1,22 @@
-class PixelGridDemo {
+/**
+ * Главный класс приложения Beading Studio
+ * Управляет всеми компонентами: загрузкой файлов, рендерингом, UI и состоянием проекта
+ */
+class BeadingStudio {
+    /**
+     * Инициализирует приложение Beading Studio
+     */
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d');
 
         // Константы
-        this.workspaceWidthMM = 150;  // Ширина рабочей области в мм
-        this.workspaceHeightMM = 150; // Высота рабочей области в мм
+        this.workspaceWidthMM = DEFAULT_WORKSPACE_WIDTH_MM;
+        this.workspaceHeightMM = DEFAULT_WORKSPACE_HEIGHT_MM;
 
         // Начальные размеры пикселя в мм
-        this.pixelWidthMM = 3.1;
-        this.pixelHeightMM = 3.1;
+        this.pixelWidthMM = DEFAULT_PIXEL_WIDTH_MM;
+        this.pixelHeightMM = DEFAULT_PIXEL_HEIGHT_MM;
 
         // Тип сетки ('peyote', 'brick')
         this.gridType = 'peyote';
@@ -23,7 +30,7 @@ class PixelGridDemo {
 
         // Порог заполнения бисеринки (0.0 - 1.0)
         // При инвертированной UI логике: 0.25 внутри = 75% в UI
-        this.fillThreshold = 0.25;
+        this.fillThreshold = DEFAULT_FILL_THRESHOLD;
 
         this.fileType = null; // 'svg' или 'dxf'
         this.hasLoadedFile = false;
@@ -98,6 +105,9 @@ class PixelGridDemo {
         // Обработчики событий мыши для оверлея рядов
         this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
         this.canvas.addEventListener('mouseleave', () => this.handleMouseLeave());
+
+        // Обработчики горячих клавиш
+        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
 
         // Первая отрисовка
         this.render();
@@ -285,6 +295,32 @@ class PixelGridDemo {
     }
 
     /**
+     * Обрабатывает нажатия горячих клавиш
+     * @param {KeyboardEvent} e - событие клавиатуры
+     */
+    handleKeyDown(e) {
+        const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+        const ctrlKey = isMac ? e.metaKey : e.ctrlKey;
+
+        // Ctrl+S / Cmd+S - сохранить проект
+        if (ctrlKey && e.key === 's') {
+            e.preventDefault();
+            this.saveProject();
+            return;
+        }
+
+        // Ctrl+O / Cmd+O - загрузить проект
+        if (ctrlKey && e.key === 'o') {
+            e.preventDefault();
+            const loadBtn = document.getElementById('loadProjectBtn');
+            if (loadBtn) {
+                loadBtn.click();
+            }
+            return;
+        }
+    }
+
+    /**
      * Вычисляет процент заполнения бисеринки фигурой
      * @param {number} x - координата X бисеринки в пикселях
      * @param {number} y - координата Y бисеринки в пикселях
@@ -299,7 +335,7 @@ class PixelGridDemo {
      * @returns {number} процент заполнения от 0 до 1
      */
     calculateBeadFillPercentage(x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY) {
-        const sampleGridSize = 5; // 5x5 = 25 точек для производительности
+        const sampleGridSize = SAMPLE_GRID_SIZE;
         let filledPoints = 0;
         let totalPoints = 0;
 
@@ -438,23 +474,37 @@ class PixelGridDemo {
         const rowType = this.gridType === 'peyote' ? 'столбец' : 'строка';
         const rowNumber = this.hoveredRow !== null ? this.hoveredRow + 1 : 0;
 
-        // Информация о бисеринке (показываем только для заполненных)
-        let beadInfo = '';
-        if (this.hoveredBead) {
-            const beadRow = this.hoveredBead.row + 1;
-            const beadCol = this.hoveredBead.col + 1;
-            beadInfo = `<div class="row-overlay-bead">● Бисеринка [${beadCol}, ${beadRow}]</div>`;
-        }
-
         const overlay = document.getElementById('rowOverlayInfo');
         if (overlay) {
-            overlay.innerHTML = `
-                <div class="row-overlay-content">
-                    <div class="row-overlay-title">${rowType.toUpperCase()} ${rowNumber}</div>
-                    <div class="row-overlay-count">${count} бисеринок</div>
-                    ${beadInfo}
-                </div>
-            `;
+            // Очищаем предыдущее содержимое
+            overlay.innerHTML = '';
+
+            // Создаем элементы через DOM API для безопасности
+            const content = document.createElement('div');
+            content.className = 'row-overlay-content';
+
+            const title = document.createElement('div');
+            title.className = 'row-overlay-title';
+            title.textContent = `${rowType.toUpperCase()} ${rowNumber}`;
+
+            const countEl = document.createElement('div');
+            countEl.className = 'row-overlay-count';
+            countEl.textContent = `${count} бисеринок`;
+
+            content.appendChild(title);
+            content.appendChild(countEl);
+
+            // Информация о бисеринке (показываем только для заполненных)
+            if (this.hoveredBead) {
+                const beadRow = this.hoveredBead.row + 1;
+                const beadCol = this.hoveredBead.col + 1;
+                const beadInfo = document.createElement('div');
+                beadInfo.className = 'row-overlay-bead';
+                beadInfo.textContent = `● Бисеринка [${beadCol}, ${beadRow}]`;
+                content.appendChild(beadInfo);
+            }
+
+            overlay.appendChild(content);
             overlay.style.display = 'block';
 
             // Позиционируем рядом с курсором
@@ -551,7 +601,7 @@ class PixelGridDemo {
         const currentScale = this.scale || 1.0; // Захватываем текущий масштаб
 
         // Для масштаба 1.0 используем исходную функцию напрямую (без преобразования)
-        if (Math.abs(currentScale - 1.0) < 0.0001) {
+        if (Math.abs(currentScale - 1.0) < SCALE_EPSILON) {
             this.originalDrawing = originalFunc;
         } else {
             // Для других масштабов преобразуем координаты
@@ -575,6 +625,16 @@ class PixelGridDemo {
 
     async handleFileUpload(file, extension) {
         try {
+            // Валидация размера файла
+            const fileSizeValidation = Validator.validateFileSize(file.size);
+            if (!fileSizeValidation.valid) {
+                this.showNotification(fileSizeValidation.error, 'error');
+                return;
+            }
+
+            // Показываем индикатор загрузки
+            this.showLoading('Загрузка файла...');
+
             let result;
 
             if (extension === 'svg') {
@@ -631,14 +691,85 @@ class PixelGridDemo {
             this.updateUI();
             this.render();
 
+            // Скрываем индикатор загрузки
+            this.hideLoading();
+            if (!this.isAutoLoading) {
+                this.showNotification('Файл успешно загружен', 'success');
+            }
+
         } catch (error) {
             console.error(`Ошибка загрузки ${extension.toUpperCase()}:`, error);
             const errorMessage = error.message || `Неизвестная ошибка при загрузке ${extension.toUpperCase()}`;
+            this.hideLoading();
             // Не показываем alert при автозагрузке
             if (!this.isAutoLoading) {
-                alert(`Ошибка загрузки ${extension.toUpperCase()} файла: ${errorMessage}`);
+                this.showNotification(`Ошибка загрузки: ${errorMessage}`, 'error');
             }
         }
+    }
+
+    /**
+     * Показывает индикатор загрузки
+     * @param {string} text - текст для отображения
+     */
+    showLoading(text = 'Загрузка...') {
+        const indicator = document.getElementById('loadingIndicator');
+        if (indicator) {
+            const textEl = indicator.querySelector('.loading-text');
+            if (textEl) {
+                textEl.textContent = text;
+            }
+            indicator.style.display = 'flex';
+        }
+    }
+
+    /**
+     * Скрывает индикатор загрузки
+     */
+    hideLoading() {
+        const indicator = document.getElementById('loadingIndicator');
+        if (indicator) {
+            indicator.style.display = 'none';
+        }
+    }
+
+    /**
+     * Показывает уведомление пользователю
+     * @param {string} message - сообщение
+     * @param {string} type - тип уведомления ('success', 'error', 'info')
+     */
+    showNotification(message, type = 'info') {
+        // Создаем временное уведомление
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: ${type === 'success' ? 'rgba(0, 255, 157, 0.9)' : type === 'error' ? 'rgba(255, 107, 107, 0.9)' : 'rgba(0, 212, 255, 0.9)'};
+            color: var(--bg-primary);
+            padding: 1rem 1.5rem;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            font-weight: 500;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        `;
+
+        document.body.appendChild(notification);
+
+        // Удаляем через 3 секунды
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, 3000);
     }
 
     handlePixelWidthChange(value) {
@@ -656,7 +787,7 @@ class PixelGridDemo {
     }
 
     handleWorkspaceWidthChange(value) {
-        this.workspaceWidthMM = value;
+        this.workspaceWidthMM = Validator.validateWorkspaceSize(value);
         this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
         this.setupCanvas();
         this.updateUI();
@@ -664,7 +795,7 @@ class PixelGridDemo {
     }
 
     handleWorkspaceHeightChange(value) {
-        this.workspaceHeightMM = value;
+        this.workspaceHeightMM = Validator.validateWorkspaceSize(value);
         this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
         this.setupCanvas();
         this.updateUI();
@@ -674,7 +805,8 @@ class PixelGridDemo {
     handleFillThresholdChange(value) {
         // Инвертируем логику: 100% чувствительности = 0% порога (показать все)
         // 0% чувствительности = 100% порога (только полные)
-        this.fillThreshold = 1 - value;
+        const invertedValue = 1 - value;
+        this.fillThreshold = Validator.validateFillThreshold(invertedValue);
         this.updateUI();
         this.render();
     }
@@ -685,7 +817,8 @@ class PixelGridDemo {
             return;
         }
 
-        this.scale = value;
+        // Валидация масштаба
+        this.scale = Validator.validateScale(value);
         this.applyScale();
 
         // Обновляем информацию о файле с новыми размерами
@@ -703,13 +836,13 @@ class PixelGridDemo {
     }
 
     handleGridOffsetXChange(value) {
-        this.gridOffsetX = value;
+        this.gridOffsetX = Validator.validateGridOffset(value);
         this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
         this.render();
     }
 
     handleGridOffsetYChange(value) {
-        this.gridOffsetY = value;
+        this.gridOffsetY = Validator.validateGridOffset(value);
         this.uiController.updateGridOffsetInputs(this.gridOffsetX, this.gridOffsetY);
         this.render();
     }
@@ -854,6 +987,8 @@ class PixelGridDemo {
      */
     async saveProject() {
         try {
+            this.showLoading('Сохранение проекта...');
+
             // Предлагаем имя файла по умолчанию
             const defaultName = this.loadedFileName ?
                 this.loadedFileName.replace(/\.[^/.]+$/, '') :
@@ -941,9 +1076,12 @@ class PixelGridDemo {
                         throw new Error(result.error || 'Неизвестная ошибка при сохранении');
                     }
                     // Проект успешно сохранен
+                    this.hideLoading();
+                    this.showNotification('Проект успешно сохранен', 'success');
                 } catch (error) {
                     console.error('Ошибка при сохранении проекта в Electron:', error);
-                    alert('Ошибка при сохранении проекта: ' + error.message);
+                    this.hideLoading();
+                    this.showNotification('Ошибка при сохранении: ' + error.message, 'error');
                 }
             } else {
                 // Fallback для браузера - скачивание файла
@@ -958,10 +1096,13 @@ class PixelGridDemo {
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
                 // Проект успешно сохранен
+                this.hideLoading();
+                this.showNotification('Проект успешно сохранен', 'success');
             }
         } catch (error) {
             console.error('Ошибка при сохранении проекта:', error);
-            alert('Ошибка при сохранении проекта: ' + error.message);
+            this.hideLoading();
+            this.showNotification('Ошибка при сохранении: ' + error.message, 'error');
         }
     }
 
@@ -993,22 +1134,47 @@ class PixelGridDemo {
                 min-width: 300px;
             `;
 
-            dialog.innerHTML = `
-                <h3 style="margin-top: 0;">Сохранить проект</h3>
-                <label>
-                    Имя файла:
-                    <input type="text" id="fileNameInput" value="${defaultName}.beading" style="width: 100%; margin-top: 8px; padding: 8px; box-sizing: border-box;">
-                </label>
-                <div style="margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;">
-                    <button id="cancelBtn" style="padding: 8px 16px;">Отмена</button>
-                    <button id="saveBtn" style="padding: 8px 16px;">Сохранить</button>
-                </div>
-            `;
+            // Создаем элементы через DOM API для безопасности
+            const h3 = document.createElement('h3');
+            h3.style.marginTop = '0';
+            h3.textContent = 'Сохранить проект';
+
+            const label = document.createElement('label');
+            label.textContent = 'Имя файла:';
+
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.id = 'fileNameInput';
+            input.value = `${defaultName}.beading`;
+            input.style.cssText = 'width: 100%; margin-top: 8px; padding: 8px; box-sizing: border-box;';
+
+            label.appendChild(document.createTextNode(' '));
+            label.appendChild(input);
+
+            const buttonContainer = document.createElement('div');
+            buttonContainer.style.cssText = 'margin-top: 16px; display: flex; gap: 8px; justify-content: flex-end;';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.id = 'cancelBtn';
+            cancelBtn.style.padding = '8px 16px';
+            cancelBtn.textContent = 'Отмена';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.id = 'saveBtn';
+            saveBtn.style.padding = '8px 16px';
+            saveBtn.textContent = 'Сохранить';
+
+            buttonContainer.appendChild(cancelBtn);
+            buttonContainer.appendChild(saveBtn);
+
+            dialog.appendChild(h3);
+            dialog.appendChild(label);
+            dialog.appendChild(buttonContainer);
 
             modal.appendChild(dialog);
             document.body.appendChild(modal);
 
-            const input = dialog.querySelector('#fileNameInput');
+            // input уже создан выше, просто выбираем его
             input.select();
 
             const cleanup = () => {
@@ -1025,7 +1191,8 @@ class PixelGridDemo {
                 if (!fileName) {
                     fileName = defaultName;
                 }
-                fileName = fileName.replace(/[<>:"/\\|?*]/g, '_');
+                // Используем Validator для очистки имени файла
+                fileName = Validator.sanitizeFileName(fileName);
                 if (!fileName.endsWith('.beading')) {
                     fileName += '.beading';
                 }
@@ -1061,6 +1228,14 @@ class PixelGridDemo {
      */
     async loadProject(file) {
         try {
+            // Валидация размера файла проекта
+            const fileSizeValidation = Validator.validateFileSize(file.size, 10 * 1024 * 1024); // 10MB для проектов
+            if (!fileSizeValidation.valid) {
+                this.showNotification(fileSizeValidation.error, 'error');
+                return;
+            }
+
+            this.showLoading('Загрузка проекта...');
             const text = await file.text();
             const projectData = JSON.parse(text);
 
@@ -1073,7 +1248,7 @@ class PixelGridDemo {
             this.gridOffsetX = projectData.gridOffsetX || 0;
             this.gridOffsetY = projectData.gridOffsetY || 0;
             this.scale = projectData.scale || 1.0;
-            this.fillThreshold = projectData.fillThreshold !== undefined ? projectData.fillThreshold : 0.75;
+            this.fillThreshold = projectData.fillThreshold !== undefined ? projectData.fillThreshold : DEFAULT_FILL_THRESHOLD;
 
             // Восстанавливаем данные файла
             this.fileType = projectData.fileType;
@@ -1136,14 +1311,17 @@ class PixelGridDemo {
             this.render();
 
             // Проект успешно загружен
+            this.hideLoading();
+            this.showNotification('Проект успешно загружен', 'success');
         } catch (error) {
             console.error('Ошибка при загрузке проекта:', error);
-            alert('Ошибка при загрузке проекта: ' + error.message);
+            this.hideLoading();
+            this.showNotification('Ошибка при загрузке: ' + error.message, 'error');
         }
     }
 }
 
 // Инициализация при загрузке страницы
 window.addEventListener('DOMContentLoaded', () => {
-    new PixelGridDemo();
+    new BeadingStudio();
 });

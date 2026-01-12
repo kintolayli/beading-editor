@@ -1,5 +1,5 @@
 {
-    "name": "beading-pattern-editor",
+    "name": "beading-studio",
     "version": "1.0.0",
     "description": "Редактор схем для бисероплетения",
     "main": "electron-main.js",

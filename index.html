@@ -188,6 +188,10 @@
             <div class="canvas-wrapper">
                 <div class="canvas-container">
                     <canvas id="canvas"></canvas>
+                    <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Загрузка...</div>
+                    </div>
                 </div>
                 <div class="stats-overlay">
                     <div class="stats">
@@ -214,6 +218,8 @@
         </div>
     </div>
 
+    <script src="constants.js"></script>
+    <script src="utils/validation.js"></script>
     <script src="dxf-loader.js"></script>
     <script src="svg-loader.js"></script>
     <script src="canvas-renderer.js"></script>

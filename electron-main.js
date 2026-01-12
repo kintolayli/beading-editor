@@ -2,6 +2,17 @@ const { app, BrowserWindow, ipcMain, dialog } = require('electron')
 const path = require('path')
 const fs = require('fs')
 
+// Обработка необработанных исключений
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+    // В продакшене можно добавить отправку отчета об ошибке
+});
+
+// Обработка необработанных промисов
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 function createWindow() {
     const win = new BrowserWindow({
         width: 1400,

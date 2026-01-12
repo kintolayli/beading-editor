@@ -425,7 +425,7 @@ class DXFLoader {
     createDrawingFunction(entities, bbox) {
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
-        const resolution = 800; // Увеличено с 200 для лучшей точности
+        const resolution = RASTERIZATION_RESOLUTION;
 
         // Создаём временный canvas для растрового представления
         const tempCanvas = document.createElement('canvas');

@@ -475,10 +475,7 @@ class UIController {
      * @returns {number} валидированное значение
      */
     clampPixelSize(value) {
-        if (isNaN(value) || value <= 0) return 1.0;
-        const min = 0.1;
-        const max = 50;
-        return Math.min(Math.max(value, min), max);
+        return Validator.validatePixelSize(value);
     }
 
     /**
@@ -487,10 +484,7 @@ class UIController {
      * @returns {number} валидированное значение
      */
     clampWorkspaceSize(value) {
-        if (isNaN(value) || value <= 0) return 10;
-        const min = 10;
-        const max = 1000;
-        return Math.min(Math.max(value, min), max);
+        return Validator.validateWorkspaceSize(value);
     }
 
     /**
@@ -499,10 +493,7 @@ class UIController {
      * @returns {number} валидированное значение
      */
     clampOffset(value) {
-        if (isNaN(value)) return 0;
-        const min = -50;
-        const max = 50;
-        return Math.min(Math.max(value, min), max);
+        return Validator.validateGridOffset(value);
     }
 
     /**
