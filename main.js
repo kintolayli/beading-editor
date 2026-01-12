@@ -284,7 +284,9 @@ class PixelGridDemo {
         // Вычисляем количество пикселей по каждой оси
         const gridWidth = Math.max(1, Math.floor(this.workspaceWidthMM / this.pixelWidthMM));
         const gridHeight = Math.max(1, Math.floor(this.workspaceHeightMM / this.pixelHeightMM));
-        const totalPixels = gridWidth * gridHeight;
+        
+        // Подсчитываем количество заполненных бисеринок
+        const filledBeads = this.countFilledBeads(gridWidth, gridHeight);
 
         this.uiController.updateUI({
             pixelWidthMM: this.pixelWidthMM,
@@ -293,8 +295,81 @@ class PixelGridDemo {
             workspaceHeightMM: this.workspaceHeightMM,
             gridWidth,
             gridHeight,
-            totalPixels
+            filledBeads
         });
+    }
+    
+    /**
+     * Подсчитывает количество заполненных бисеринок в узоре
+     * @param {number} gridWidth - ширина сетки
+     * @param {number} gridHeight - высота сетки
+     * @returns {number} количество заполненных бисеринок
+     */
+    countFilledBeads(gridWidth, gridHeight) {
+        if (!this.originalDrawing) return 0;
+        
+        const canvasWidth = this.currentCanvasWidth || this.canvas.width;
+        const canvasHeight = this.currentCanvasHeight || this.canvas.height;
+        
+        const pixelWidthPx = canvasWidth / gridWidth;
+        const pixelHeightPx = canvasHeight / gridHeight;
+        
+        // Вычисляем масштаб для файла
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        let offsetX = 0.0;
+        let offsetY = 0.0;
+        
+        if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+            scaleX = this.fileWidthMM / this.workspaceWidthMM;
+            scaleY = this.fileHeightMM / this.workspaceHeightMM;
+            offsetX = (1.0 - scaleX) / 2.0;
+            offsetY = (1.0 - scaleY) / 2.0;
+        }
+        
+        let count = 0;
+        
+        for (let row = 0; row < gridHeight; row++) {
+            for (let col = 0; col < gridWidth; col++) {
+                // Смещение для разных типов сеток
+                let offsetPxX = 0;
+                let offsetPxY = 0;
+                
+                if (this.gridType === 'peyote') {
+                    offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+                } else if (this.gridType === 'brick') {
+                    offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+                }
+                
+                // Экранные координаты
+                const x = col * pixelWidthPx + offsetPxX;
+                const y = row * pixelHeightPx + offsetPxY;
+                
+                // Нормализованные координаты центра
+                const workspaceX = (x + pixelWidthPx / 2) / canvasWidth;
+                const workspaceY = (y + pixelHeightPx / 2) / canvasHeight;
+                
+                // Преобразуем в координаты файла
+                let fileX = workspaceX;
+                let fileY = workspaceY;
+                
+                if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+                    fileX = (workspaceX - offsetX) / scaleX;
+                    fileY = (workspaceY - offsetY) / scaleY;
+                    
+                    // Пропускаем бисеринки вне файла
+                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
+                        continue;
+                    }
+                }
+                
+                if (this.originalDrawing(fileX, fileY)) {
+                    count++;
+                }
+            }
+        }
+        
+        return count;
     }
 
     render() {
@@ -315,6 +390,9 @@ class PixelGridDemo {
             fileHeightMM: this.fileHeightMM,
             gridType: this.gridType
         });
+        
+        // Обновляем статистику после рендеринга
+        this.updateUI();
     }
 }
 

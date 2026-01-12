@@ -162,13 +162,13 @@ class UIController {
             workspaceHeightMM,
             gridWidth,
             gridHeight,
-            totalPixels
+            filledBeads
         } = data;
         
         document.getElementById('pixelDimensionsDisplay').textContent = 
             `${pixelWidthMM.toFixed(3)} × ${pixelHeightMM.toFixed(3)}`;
         document.getElementById('gridSize').textContent = `${gridWidth}×${gridHeight}`;
-        document.getElementById('totalPixels').textContent = totalPixels.toLocaleString('ru-RU');
+        document.getElementById('totalPixels').textContent = filledBeads.toLocaleString('ru-RU');
         document.getElementById('workspaceSize').textContent = 
             `${workspaceWidthMM.toFixed(1)}×${workspaceHeightMM.toFixed(1)} мм`;
     }
