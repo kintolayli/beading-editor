@@ -34,6 +34,7 @@ class UIController {
         this.gridOffsetYSlider = document.getElementById('gridOffsetYSlider');
         this.fillThresholdInput = document.getElementById('fillThresholdInput');
         this.fillThresholdSlider = document.getElementById('fillThresholdSlider');
+        this.syncWorkspaceSizeCheckbox = document.getElementById('syncWorkspaceSize');
 
         this.initialize();
     }
@@ -87,7 +88,7 @@ class UIController {
         // Обработчики для размеров рабочей области
         this.workspaceWidthInput.addEventListener('blur', () => {
             const value = this.clampWorkspaceSize(parseFloat(this.workspaceWidthInput.value));
-            this.callbacks.onWorkspaceWidthChange(value);
+            this.handleWorkspaceWidthChange(value, updateSliderProgress);
         });
 
         this.workspaceWidthInput.addEventListener('keydown', (e) => {
@@ -98,7 +99,7 @@ class UIController {
 
         this.workspaceHeightInput.addEventListener('blur', () => {
             const value = this.clampWorkspaceSize(parseFloat(this.workspaceHeightInput.value));
-            this.callbacks.onWorkspaceHeightChange(value);
+            this.handleWorkspaceHeightChange(value, updateSliderProgress);
         });
 
         this.workspaceHeightInput.addEventListener('keydown', (e) => {
@@ -110,20 +111,12 @@ class UIController {
         // Обработчики для ползунков рабочей области
         this.workspaceWidthSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
-            this.workspaceWidthInput.value = value;
-            updateSliderProgress(this.workspaceWidthSlider);
-            if (this.callbacks.onWorkspaceWidthChange) {
-                this.callbacks.onWorkspaceWidthChange(value);
-            }
+            this.handleWorkspaceWidthChange(value, updateSliderProgress);
         });
 
         this.workspaceHeightSlider.addEventListener('input', (e) => {
             const value = parseFloat(e.target.value);
-            this.workspaceHeightInput.value = value;
-            updateSliderProgress(this.workspaceHeightSlider);
-            if (this.callbacks.onWorkspaceHeightChange) {
-                this.callbacks.onWorkspaceHeightChange(value);
-            }
+            this.handleWorkspaceHeightChange(value, updateSliderProgress);
         });
 
         // Обработчик для масштаба (только для SVG)
@@ -348,6 +341,56 @@ class UIController {
             const max = parseFloat(this.heightSlider.max);
             const progress = ((height - min) / (max - min)) * 100;
             this.heightSlider.style.setProperty('--slider-progress', `${progress}%`);
+        }
+    }
+
+    /**
+     * Обрабатывает изменение ширины рабочей области с синхронизацией
+     * @param {number} value - новое значение ширины
+     * @param {Function} updateSliderProgress - функция обновления прогресса слайдера
+     */
+    handleWorkspaceWidthChange(value, updateSliderProgress) {
+        this.workspaceWidthInput.value = value;
+        this.workspaceWidthSlider.value = value;
+        updateSliderProgress(this.workspaceWidthSlider);
+
+        // Синхронизация высоты, если checkbox активен
+        if (this.syncWorkspaceSizeCheckbox && this.syncWorkspaceSizeCheckbox.checked) {
+            this.workspaceHeightInput.value = value;
+            this.workspaceHeightSlider.value = value;
+            updateSliderProgress(this.workspaceHeightSlider);
+            if (this.callbacks.onWorkspaceHeightChange) {
+                this.callbacks.onWorkspaceHeightChange(value);
+            }
+        }
+
+        if (this.callbacks.onWorkspaceWidthChange) {
+            this.callbacks.onWorkspaceWidthChange(value);
+        }
+    }
+
+    /**
+     * Обрабатывает изменение высоты рабочей области с синхронизацией
+     * @param {number} value - новое значение высоты
+     * @param {Function} updateSliderProgress - функция обновления прогресса слайдера
+     */
+    handleWorkspaceHeightChange(value, updateSliderProgress) {
+        this.workspaceHeightInput.value = value;
+        this.workspaceHeightSlider.value = value;
+        updateSliderProgress(this.workspaceHeightSlider);
+
+        // Синхронизация ширины, если checkbox активен
+        if (this.syncWorkspaceSizeCheckbox && this.syncWorkspaceSizeCheckbox.checked) {
+            this.workspaceWidthInput.value = value;
+            this.workspaceWidthSlider.value = value;
+            updateSliderProgress(this.workspaceWidthSlider);
+            if (this.callbacks.onWorkspaceWidthChange) {
+                this.callbacks.onWorkspaceWidthChange(value);
+            }
+        }
+
+        if (this.callbacks.onWorkspaceHeightChange) {
+            this.callbacks.onWorkspaceHeightChange(value);
         }
     }
 
