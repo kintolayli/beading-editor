@@ -18,15 +18,16 @@ class PixelGridDemo {
         this.gridOffsetX = 0;
         this.gridOffsetY = 0;
 
-        // Масштаб загруженного изображения
-        this.scale = 1.0;
         this.hasLoadedFile = false;
 
-        // Реальные размеры загруженного файла в мм
+        // Размеры загруженного файла в мм
         this.fileWidthMM = null;
         this.fileHeightMM = null;
+        
+        // Имя загруженного файла
+        this.loadedFileName = null;
 
-        // Исходные данные (до масштабирования)
+        // Исходные данные
         this.originalContour = null;
         this.originalDrawingFunction = null;
         this.contour = null;
@@ -46,7 +47,6 @@ class PixelGridDemo {
             onPixelHeightChange: (value) => this.handlePixelHeightChange(value),
             onWorkspaceWidthChange: (value) => this.handleWorkspaceWidthChange(value),
             onWorkspaceHeightChange: (value) => this.handleWorkspaceHeightChange(value),
-            onScaleChange: (value) => this.handleScaleChange(value),
             onFileUpload: (file, extension) => this.handleFileUpload(file, extension),
             onGridTypeChange: (type) => this.handleGridTypeChange(type),
             onGridOffsetXChange: (value) => this.handleGridOffsetXChange(value),
@@ -103,6 +103,7 @@ class PixelGridDemo {
         // Сбрасываем размеры файла для дефолтного рисунка
         this.fileWidthMM = null;
         this.fileHeightMM = null;
+        this.loadedFileName = null;
         this.hasLoadedFile = false;
 
         // Создаём исходный рисунок в виде функции,
@@ -112,41 +113,6 @@ class PixelGridDemo {
         this.originalDrawing = this.originalDrawingFunction;
     }
 
-    applyScale() {
-        if (!this.originalContour || !this.originalDrawingFunction) {
-            return;
-        }
-
-        // Применяем масштаб к контуру
-        const centerX = 0.5;
-        const centerY = 0.5;
-
-        this.contour = this.originalContour.map(point => {
-            const dx = point.x - centerX;
-            const dy = point.y - centerY;
-            return {
-                x: centerX + dx * this.scale,
-                y: centerY + dy * this.scale
-            };
-        });
-
-        // Создаём масштабированную функцию рисунка
-        const originalFunc = this.originalDrawingFunction;
-        this.originalDrawing = (normalizedX, normalizedY) => {
-            // Преобразуем координаты обратно к исходному масштабу
-            const dx = normalizedX - centerX;
-            const dy = normalizedY - centerY;
-            const origX = centerX + dx / this.scale;
-            const origY = centerY + dy / this.scale;
-
-            // Проверяем границы
-            if (origX < 0 || origX > 1 || origY < 0 || origY > 1) {
-                return false;
-            }
-
-            return originalFunc(origX, origY);
-        };
-    }
 
     createHeartContour() {
         // Контур сердца в нормализованных координатах [0, 1]
@@ -201,22 +167,20 @@ class PixelGridDemo {
             // Сохраняем контур и функцию отрисовки
             if (result.contour && result.contour.length > 0) {
                 this.originalContour = result.contour;
+                this.contour = result.contour;
             }
             this.originalDrawingFunction = result.drawingFunction;
+            this.originalDrawing = result.drawingFunction;
 
-            // Сохраняем реальные размеры файла
+            // Сохраняем размеры файла
             this.fileWidthMM = result.width;
             this.fileHeightMM = result.height;
-
-            // Сбрасываем масштаб и применяем
-            this.scale = 1.0;
+            this.loadedFileName = file.name;
             this.hasLoadedFile = true;
-            this.uiController.showScaleSection(true);
-            this.uiController.updateScale(1.0);
-            this.applyScale();
 
             // Обновляем UI
-            this.uiController.updateFileInfo(file.name, this.fileWidthMM, this.fileHeightMM);
+            this.uiController.updateFileInfo(this.loadedFileName, this.fileWidthMM, this.fileHeightMM);
+            this.updateUI();
             this.render();
 
         } catch (error) {
@@ -253,12 +217,6 @@ class PixelGridDemo {
         this.uiController.updateWorkspaceInputs(this.workspaceWidthMM, this.workspaceHeightMM);
         this.setupCanvas();
         this.updateUI();
-        this.render();
-    }
-
-    handleScaleChange(value) {
-        this.scale = value;
-        this.applyScale();
         this.render();
     }
 

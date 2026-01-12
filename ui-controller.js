@@ -8,7 +8,6 @@ class UIController {
      * @param {Function} callbacks.onPixelHeightChange - вызывается при изменении высоты пикселя
      * @param {Function} callbacks.onWorkspaceWidthChange - вызывается при изменении ширины рабочей области
      * @param {Function} callbacks.onWorkspaceHeightChange - вызывается при изменении высоты рабочей области
-     * @param {Function} callbacks.onScaleChange - вызывается при изменении масштаба
      * @param {Function} callbacks.onFileUpload - вызывается при загрузке файла
      * @param {Function} callbacks.onGridTypeChange - вызывается при изменении типа сетки
      * @param {Function} callbacks.onUpdateUI - вызывается для обновления UI
@@ -19,7 +18,6 @@ class UIController {
         this.heightInput = document.getElementById('pixelHeightInput');
         this.widthSlider = document.getElementById('pixelWidthSlider');
         this.heightSlider = document.getElementById('pixelHeightSlider');
-        this.scaleSlider = document.getElementById('scaleSlider');
         this.fileUpload = document.getElementById('fileUpload');
         this.workspaceWidthInput = document.getElementById('workspaceWidthInput');
         this.workspaceHeightInput = document.getElementById('workspaceHeightInput');
@@ -101,14 +99,6 @@ class UIController {
             }
         });
         
-        // Обработчик для масштаба
-        this.scaleSlider.addEventListener('input', (e) => {
-            const value = parseFloat(e.target.value);
-            updateSliderProgress(this.scaleSlider);
-            document.getElementById('scaleValue').textContent = `${Math.round(value * 100)}%`;
-            this.callbacks.onScaleChange(value);
-        });
-        
         // Обработчик для загрузки файла
         this.fileUpload.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -183,7 +173,6 @@ class UIController {
         // Инициализация прогресса ползунков
         updateSliderProgress(this.widthSlider);
         updateSliderProgress(this.heightSlider);
-        updateSliderProgress(this.scaleSlider);
         updateSliderProgress(this.gridOffsetXSlider);
         updateSliderProgress(this.gridOffsetYSlider);
     }
@@ -262,14 +251,6 @@ class UIController {
     }
     
     /**
-     * Показывает/скрывает секцию масштаба
-     * @param {boolean} show - показывать ли секцию
-     */
-    showScaleSection(show) {
-        document.getElementById('scaleSection').style.display = show ? 'block' : 'none';
-    }
-    
-    /**
      * Обновляет информацию о загруженном файле
      * @param {string} fileName - имя файла
      * @param {number} width - ширина файла в мм
@@ -278,19 +259,6 @@ class UIController {
     updateFileInfo(fileName, width, height) {
         document.getElementById('uploadInfo').textContent = 
             `Загружен: ${fileName} (${width.toFixed(1)}×${height.toFixed(1)} мм)`;
-    }
-    
-    /**
-     * Обновляет значение масштаба
-     * @param {number} scale - значение масштаба
-     */
-    updateScale(scale) {
-        this.scaleSlider.value = scale;
-        document.getElementById('scaleValue').textContent = `${Math.round(scale * 100)}%`;
-        const min = parseFloat(this.scaleSlider.min);
-        const max = parseFloat(this.scaleSlider.max);
-        const progress = ((scale - min) / (max - min)) * 100;
-        this.scaleSlider.style.setProperty('--slider-progress', `${progress}%`);
     }
     
     /**
