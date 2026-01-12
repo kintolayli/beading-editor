@@ -1,5 +1,13 @@
 /**
  * Модуль для загрузки и парсинга DXF файлов
+ * 
+ * Поддерживаемые элементы DXF:
+ * - LINE (линии)
+ * - CIRCLE (окружности)
+ * - ARC (дуги)
+ * - POLYLINE / LWPOLYLINE (полилинии)
+ * - ELLIPSE (эллипсы)
+ * - SPLINE (сплайны)
  */
 class DXFLoader {
     /**
@@ -10,26 +18,35 @@ class DXFLoader {
     async loadDXF(file) {
         const text = await file.text();
         const dxfData = this.parseDXF(text);
-        
+
         if (!dxfData.entities || dxfData.entities.length === 0) {
             throw new Error('DXF не содержит графических объектов');
         }
-        
+
+        // Отладочный вывод
+        console.log('DXF entities:', dxfData.entities.length);
+        dxfData.entities.forEach((e, i) => {
+            console.log(`  Entity ${i}: ${e.type}`, e);
+        });
+
         // Находим bounding box всех объектов
         const bbox = this.calculateBoundingBox(dxfData.entities);
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
-        
+
+        console.log('Bounding box:', bbox, 'Size:', width, 'x', height);
+
         if (width === 0 || height === 0) {
             throw new Error('Некорректные размеры объектов в DXF');
         }
-        
+
         // Создаём контур
         const contour = this.extractContour(dxfData.entities, bbox);
-        
+        console.log('Contour points:', contour.length);
+
         // Создаём растровое представление и функцию проверки заполнения
         const drawingFunction = this.createDrawingFunction(dxfData.entities, bbox);
-        
+
         return {
             contour,
             drawingFunction,
@@ -37,7 +54,7 @@ class DXFLoader {
             height
         };
     }
-    
+
     /**
      * Вычисляет bounding box всех сущностей
      * @param {Array} entities - массив сущностей DXF
@@ -45,7 +62,7 @@ class DXFLoader {
      */
     calculateBoundingBox(entities) {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        
+
         entities.forEach(entity => {
             if (entity.type === 'LINE') {
                 minX = Math.min(minX, entity.x1, entity.x2);
@@ -57,6 +74,13 @@ class DXFLoader {
                 minY = Math.min(minY, entity.cy - entity.radius);
                 maxX = Math.max(maxX, entity.cx + entity.radius);
                 maxY = Math.max(maxY, entity.cy + entity.radius);
+            } else if (entity.type === 'ARC') {
+                // Вычисляем bounding box для дуги
+                const arcBbox = this.calculateArcBoundingBox(entity);
+                minX = Math.min(minX, arcBbox.minX);
+                minY = Math.min(minY, arcBbox.minY);
+                maxX = Math.max(maxX, arcBbox.maxX);
+                maxY = Math.max(maxY, arcBbox.maxY);
             } else if (entity.type === 'POLYLINE' || entity.type === 'LWPOLYLINE') {
                 entity.vertices.forEach(v => {
                     minX = Math.min(minX, v.x);
@@ -64,12 +88,58 @@ class DXFLoader {
                     maxX = Math.max(maxX, v.x);
                     maxY = Math.max(maxY, v.y);
                 });
+            } else if (entity.type === 'ELLIPSE') {
+                // Упрощенный bounding box для эллипса
+                minX = Math.min(minX, entity.centerX - entity.majorAxisLength);
+                minY = Math.min(minY, entity.centerY - entity.majorAxisLength);
+                maxX = Math.max(maxX, entity.centerX + entity.majorAxisLength);
+                maxY = Math.max(maxY, entity.centerY + entity.majorAxisLength);
+            } else if (entity.type === 'SPLINE') {
+                // Bounding box для сплайна по контрольным точкам
+                if (entity.controlPoints && entity.controlPoints.length > 0) {
+                    entity.controlPoints.forEach(p => {
+                        minX = Math.min(minX, p.x);
+                        minY = Math.min(minY, p.y);
+                        maxX = Math.max(maxX, p.x);
+                        maxY = Math.max(maxY, p.y);
+                    });
+                }
             }
         });
-        
+
         return { minX, minY, maxX, maxY };
     }
-    
+
+    /**
+     * Вычисляет bounding box для дуги
+     * @param {Object} arc - объект дуги
+     * @returns {{minX: number, minY: number, maxX: number, maxY: number}}
+     */
+    calculateArcBoundingBox(arc) {
+        // Генерируем точки дуги и находим min/max
+        const points = this.generateArcPoints(arc, 50);
+
+        if (points.length === 0) {
+            return {
+                minX: arc.cx - arc.radius,
+                minY: arc.cy - arc.radius,
+                maxX: arc.cx + arc.radius,
+                maxY: arc.cy + arc.radius
+            };
+        }
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+
+        points.forEach(p => {
+            minX = Math.min(minX, p.x);
+            minY = Math.min(minY, p.y);
+            maxX = Math.max(maxX, p.x);
+            maxY = Math.max(maxY, p.y);
+        });
+
+        return { minX, minY, maxX, maxY };
+    }
+
     /**
      * Извлекает контур из сущностей DXF
      * @param {Array} entities - массив сущностей DXF
@@ -80,34 +150,55 @@ class DXFLoader {
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
         let contourPoints = [];
-        
-        // Если есть полилиния или окружность, используем её как контур
-        const firstPolyOrCircle = entities.find(e => 
-            e.type === 'POLYLINE' || e.type === 'LWPOLYLINE' || e.type === 'CIRCLE'
-        );
-        
-        if (firstPolyOrCircle) {
-            if (firstPolyOrCircle.type === 'CIRCLE') {
-                const steps = 100;
-                for (let i = 0; i <= steps; i++) {
-                    const angle = (i / steps) * 2 * Math.PI;
-                    const x = firstPolyOrCircle.cx + firstPolyOrCircle.radius * Math.cos(angle);
-                    const y = firstPolyOrCircle.cy + firstPolyOrCircle.radius * Math.sin(angle);
-                    contourPoints.push({
-                        x: (x - bbox.minX) / width,
-                        y: (y - bbox.minY) / height
-                    });
-                }
-            } else {
-                firstPolyOrCircle.vertices.forEach(v => {
-                    contourPoints.push({
-                        x: (v.x - bbox.minX) / width,
-                        y: (v.y - bbox.minY) / height
-                    });
+
+        // Проверяем, есть ли окружность
+        const circle = entities.find(e => e.type === 'CIRCLE');
+        if (circle) {
+            const steps = 100;
+            for (let i = 0; i <= steps; i++) {
+                const angle = (i / steps) * 2 * Math.PI;
+                const x = circle.cx + circle.radius * Math.cos(angle);
+                const y = circle.cy + circle.radius * Math.sin(angle);
+                contourPoints.push({
+                    x: (x - bbox.minX) / width,
+                    y: (y - bbox.minY) / height
                 });
             }
-        } else {
-            // Если только линии, создаём контур из bounding box
+            return contourPoints;
+        }
+
+        // Проверяем, есть ли полилиния
+        const polyline = entities.find(e => e.type === 'POLYLINE' || e.type === 'LWPOLYLINE');
+        if (polyline) {
+            polyline.vertices.forEach(v => {
+                contourPoints.push({
+                    x: (v.x - bbox.minX) / width,
+                    y: (v.y - bbox.minY) / height
+                });
+            });
+            return contourPoints;
+        }
+
+        // Собираем все дуги и линии в сегменты с начальной и конечной точками
+        const segments = this.extractSegments(entities);
+
+        if (segments.length > 0) {
+            // Соединяем сегменты в замкнутый контур
+            const orderedSegments = this.orderSegments(segments);
+
+            // Генерируем точки контура из упорядоченных сегментов
+            orderedSegments.forEach(segment => {
+                segment.points.forEach(p => {
+                    contourPoints.push({
+                        x: (p.x - bbox.minX) / width,
+                        y: (p.y - bbox.minY) / height
+                    });
+                });
+            });
+        }
+
+        // Если контур пустой, используем bounding box
+        if (contourPoints.length === 0) {
             contourPoints = [
                 { x: 0, y: 0 },
                 { x: 1, y: 0 },
@@ -115,10 +206,152 @@ class DXFLoader {
                 { x: 0, y: 1 }
             ];
         }
-        
+
         return contourPoints;
     }
-    
+
+    /**
+     * Извлекает сегменты из сущностей DXF
+     * @param {Array} entities - массив сущностей
+     * @returns {Array} массив сегментов с точками и конечными координатами
+     */
+    extractSegments(entities) {
+        const segments = [];
+
+        entities.forEach(entity => {
+            if (entity.type === 'LINE') {
+                segments.push({
+                    type: 'LINE',
+                    startX: entity.x1,
+                    startY: entity.y1,
+                    endX: entity.x2,
+                    endY: entity.y2,
+                    points: [
+                        { x: entity.x1, y: entity.y1 },
+                        { x: entity.x2, y: entity.y2 }
+                    ]
+                });
+            } else if (entity.type === 'ARC') {
+                const points = this.generateArcPoints(entity, 30);
+                if (points.length > 0) {
+                    segments.push({
+                        type: 'ARC',
+                        startX: points[0].x,
+                        startY: points[0].y,
+                        endX: points[points.length - 1].x,
+                        endY: points[points.length - 1].y,
+                        points: points
+                    });
+                }
+            }
+        });
+
+        return segments;
+    }
+
+    /**
+     * Генерирует точки для дуги
+     * @param {Object} arc - объект дуги
+     * @param {number} steps - количество точек
+     * @returns {Array} массив точек
+     */
+    generateArcPoints(arc, steps) {
+        const points = [];
+        const startRad = (arc.startAngle * Math.PI) / 180;
+        const endRad = (arc.endAngle * Math.PI) / 180;
+
+        // Вычисляем длину дуги (против часовой стрелки)
+        let arcLength = endRad - startRad;
+        if (arcLength < 0) arcLength += 2 * Math.PI;
+
+        const numSteps = Math.max(steps, Math.floor(arcLength * 30 / (2 * Math.PI)));
+
+        for (let i = 0; i <= numSteps; i++) {
+            const t = i / numSteps;
+            const angle = startRad + t * arcLength;
+            const x = arc.cx + arc.radius * Math.cos(angle);
+            const y = arc.cy + arc.radius * Math.sin(angle);
+            points.push({ x, y });
+        }
+
+        return points;
+    }
+
+    /**
+     * Упорядочивает сегменты в связный контур
+     * @param {Array} segments - массив сегментов
+     * @returns {Array} упорядоченный массив сегментов
+     */
+    orderSegments(segments) {
+        if (segments.length === 0) return [];
+        if (segments.length === 1) return segments;
+
+        const tolerance = 0.5; // Допуск для сравнения координат (в единицах DXF)
+        const ordered = [];
+        const used = new Set();
+
+        // Начинаем с первого сегмента
+        ordered.push(segments[0]);
+        used.add(0);
+
+        let currentEndX = segments[0].endX;
+        let currentEndY = segments[0].endY;
+
+        while (ordered.length < segments.length) {
+            let foundNext = false;
+
+            for (let i = 0; i < segments.length; i++) {
+                if (used.has(i)) continue;
+
+                const seg = segments[i];
+
+                // Проверяем, соединяется ли начало сегмента с текущим концом
+                if (Math.abs(seg.startX - currentEndX) < tolerance &&
+                    Math.abs(seg.startY - currentEndY) < tolerance) {
+                    ordered.push(seg);
+                    used.add(i);
+                    currentEndX = seg.endX;
+                    currentEndY = seg.endY;
+                    foundNext = true;
+                    break;
+                }
+
+                // Проверяем, соединяется ли конец сегмента с текущим концом (обратное направление)
+                if (Math.abs(seg.endX - currentEndX) < tolerance &&
+                    Math.abs(seg.endY - currentEndY) < tolerance) {
+                    // Разворачиваем сегмент
+                    const reversedSeg = {
+                        ...seg,
+                        startX: seg.endX,
+                        startY: seg.endY,
+                        endX: seg.startX,
+                        endY: seg.startY,
+                        points: [...seg.points].reverse()
+                    };
+                    ordered.push(reversedSeg);
+                    used.add(i);
+                    currentEndX = reversedSeg.endX;
+                    currentEndY = reversedSeg.endY;
+                    foundNext = true;
+                    break;
+                }
+            }
+
+            if (!foundNext) {
+                // Не нашли следующий сегмент, добавляем оставшиеся как есть
+                for (let i = 0; i < segments.length; i++) {
+                    if (!used.has(i)) {
+                        ordered.push(segments[i]);
+                        used.add(i);
+                    }
+                }
+                break;
+            }
+        }
+
+        return ordered;
+    }
+
     /**
      * Создаёт функцию проверки заполнения на основе растрового представления
      * @param {Array} entities - массив сущностей DXF
@@ -129,85 +362,127 @@ class DXFLoader {
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
         const resolution = 200;
-        
+
         // Создаём временный canvas для растрового представления
         const tempCanvas = document.createElement('canvas');
         const tempCtx = tempCanvas.getContext('2d');
         tempCanvas.width = resolution;
         tempCanvas.height = resolution;
-        
+
         // Очищаем белым
         tempCtx.fillStyle = 'white';
         tempCtx.fillRect(0, 0, resolution, resolution);
-        
-        // Рисуем все объекты
+
         tempCtx.fillStyle = 'black';
         tempCtx.strokeStyle = 'black';
         tempCtx.lineWidth = 2;
-        
-        entities.forEach(entity => {
-            if (entity.type === 'LINE') {
-                tempCtx.beginPath();
-                tempCtx.moveTo(
-                    (entity.x1 - bbox.minX) / width * resolution, 
-                    (entity.y1 - bbox.minY) / height * resolution
-                );
-                tempCtx.lineTo(
-                    (entity.x2 - bbox.minX) / width * resolution, 
-                    (entity.y2 - bbox.minY) / height * resolution
-                );
-                tempCtx.stroke();
-            } else if (entity.type === 'CIRCLE') {
-                tempCtx.beginPath();
-                tempCtx.arc(
-                    (entity.cx - bbox.minX) / width * resolution,
-                    (entity.cy - bbox.minY) / height * resolution,
-                    entity.radius / width * resolution,
-                    0, 2 * Math.PI
-                );
-                tempCtx.fill();
-            } else if (entity.type === 'POLYLINE' || entity.type === 'LWPOLYLINE') {
-                tempCtx.beginPath();
-                entity.vertices.forEach((v, i) => {
-                    const x = (v.x - bbox.minX) / width * resolution;
-                    const y = (v.y - bbox.minY) / height * resolution;
-                    if (i === 0) {
+
+        // Проверяем, есть ли полилиния или окружность (простые замкнутые фигуры)
+        const circle = entities.find(e => e.type === 'CIRCLE');
+        if (circle) {
+            tempCtx.beginPath();
+            tempCtx.arc(
+                (circle.cx - bbox.minX) / width * resolution,
+                (circle.cy - bbox.minY) / height * resolution,
+                circle.radius / width * resolution,
+                0, 2 * Math.PI
+            );
+            tempCtx.fill();
+        }
+
+        const polyline = entities.find(e => (e.type === 'POLYLINE' || e.type === 'LWPOLYLINE') && e.closed);
+        if (polyline) {
+            tempCtx.beginPath();
+            polyline.vertices.forEach((v, i) => {
+                const x = (v.x - bbox.minX) / width * resolution;
+                const y = (v.y - bbox.minY) / height * resolution;
+                if (i === 0) {
+                    tempCtx.moveTo(x, y);
+                } else {
+                    tempCtx.lineTo(x, y);
+                }
+            });
+            tempCtx.closePath();
+            tempCtx.fill();
+        }
+
+        // Собираем все сегменты и создаем замкнутый контур
+        const segments = this.extractSegments(entities);
+
+        if (segments.length > 0) {
+            const orderedSegments = this.orderSegments(segments);
+
+            // Рисуем замкнутый контур из упорядоченных сегментов
+            tempCtx.beginPath();
+            let isFirst = true;
+
+            orderedSegments.forEach(segment => {
+                segment.points.forEach((p, i) => {
+                    const x = (p.x - bbox.minX) / width * resolution;
+                    const y = (p.y - bbox.minY) / height * resolution;
+
+                    if (isFirst) {
                         tempCtx.moveTo(x, y);
+                        isFirst = false;
                     } else {
                         tempCtx.lineTo(x, y);
                     }
                 });
-                if (entity.closed) {
-                    tempCtx.closePath();
-                }
+            });
+
+            tempCtx.closePath();
+            tempCtx.fill();
+        }
+
+        // Дополнительно рисуем эллипсы и сплайны
+        entities.forEach(entity => {
+            if (entity.type === 'ELLIPSE') {
+                tempCtx.beginPath();
+                tempCtx.ellipse(
+                    (entity.centerX - bbox.minX) / width * resolution,
+                    (entity.centerY - bbox.minY) / height * resolution,
+                    entity.majorAxisLength / width * resolution,
+                    entity.minorAxisLength / height * resolution,
+                    entity.rotation || 0,
+                    0, 2 * Math.PI
+                );
                 tempCtx.fill();
+            } else if (entity.type === 'SPLINE' && entity.closed) {
+                if (entity.controlPoints && entity.controlPoints.length > 0) {
+                    tempCtx.beginPath();
+                    entity.controlPoints.forEach((p, i) => {
+                        const x = (p.x - bbox.minX) / width * resolution;
+                        const y = (p.y - bbox.minY) / height * resolution;
+                        if (i === 0) {
+                            tempCtx.moveTo(x, y);
+                        } else {
+                            tempCtx.lineTo(x, y);
+                        }
+                    });
+                    tempCtx.closePath();
+                    tempCtx.fill();
+                }
             }
         });
-        
-        // Если это просто контур из линий (как квадрат), заполняем его
-        if (entities.length >= 3 && entities.every(e => e.type === 'LINE')) {
-            tempCtx.fillStyle = 'black';
-            tempCtx.fillRect(0, 0, resolution, resolution);
-        }
-        
+
         // Создаём функцию проверки заполнения
         const imageData = tempCtx.getImageData(0, 0, resolution, resolution);
         return (normalizedX, normalizedY) => {
             const x = Math.floor(normalizedX * resolution);
             const y = Math.floor(normalizedY * resolution);
-            
+
             if (x < 0 || x >= resolution || y < 0 || y >= resolution) {
                 return false;
             }
-            
+
             const index = (y * resolution + x) * 4;
             const r = imageData.data[index];
-            
+
             // Считаем заполненным, если не белый
             return r < 128;
         };
     }
-    
+
     /**
      * Парсит DXF файл и извлекает сущности
      * @param {string} text - содержимое DXF файла
@@ -216,14 +491,14 @@ class DXFLoader {
     parseDXF(text) {
         const lines = text.split('\n').map(l => l.trim().replace('\r', ''));
         const entities = [];
-        
+
         let i = 0;
         let inEntitiesSection = false;
-        
+
         while (i < lines.length) {
             const code = lines[i];
             const value = lines[i + 1];
-            
+
             // Ищем секцию ENTITIES
             if (code === '0' && value === 'SECTION') {
                 i += 2;
@@ -233,7 +508,7 @@ class DXFLoader {
                     continue;
                 }
             }
-            
+
             // Парсим объекты в секции ENTITIES
             if (inEntitiesSection && code === '0') {
                 if (value === 'ENDSEC') {
@@ -244,18 +519,27 @@ class DXFLoader {
                 } else if (value === 'CIRCLE') {
                     const circle = this.parseDXFCircle(lines, i);
                     if (circle) entities.push(circle);
+                } else if (value === 'ARC') {
+                    const arc = this.parseDXFArc(lines, i);
+                    if (arc) entities.push(arc);
                 } else if (value === 'POLYLINE' || value === 'LWPOLYLINE') {
                     const polyline = this.parseDXFPolyline(lines, i, value);
                     if (polyline) entities.push(polyline);
+                } else if (value === 'ELLIPSE') {
+                    const ellipse = this.parseDXFEllipse(lines, i);
+                    if (ellipse) entities.push(ellipse);
+                } else if (value === 'SPLINE') {
+                    const spline = this.parseDXFSpline(lines, i);
+                    if (spline) entities.push(spline);
                 }
             }
-            
+
             i += 2;
         }
-        
+
         return { entities };
     }
-    
+
     /**
      * Парсит линию из DXF
      * @param {Array} lines - массив строк DXF
@@ -265,27 +549,27 @@ class DXFLoader {
     parseDXFLine(lines, startIndex) {
         let x1, y1, x2, y2;
         let i = startIndex + 2;
-        
+
         while (i < lines.length) {
             const code = lines[i];
             const value = lines[i + 1];
-            
+
             if (code === '0') break;
-            
+
             if (code === '10') x1 = parseFloat(value);
             if (code === '20') y1 = parseFloat(value);
             if (code === '11') x2 = parseFloat(value);
             if (code === '21') y2 = parseFloat(value);
-            
+
             i += 2;
         }
-        
+
         if (x1 !== undefined && y1 !== undefined && x2 !== undefined && y2 !== undefined) {
             return { type: 'LINE', x1, y1, x2, y2 };
         }
         return null;
     }
-    
+
     /**
      * Парсит окружность из DXF
      * @param {Array} lines - массив строк DXF
@@ -295,26 +579,26 @@ class DXFLoader {
     parseDXFCircle(lines, startIndex) {
         let cx, cy, radius;
         let i = startIndex + 2;
-        
+
         while (i < lines.length) {
             const code = lines[i];
             const value = lines[i + 1];
-            
+
             if (code === '0') break;
-            
+
             if (code === '10') cx = parseFloat(value);
             if (code === '20') cy = parseFloat(value);
             if (code === '40') radius = parseFloat(value);
-            
+
             i += 2;
         }
-        
+
         if (cx !== undefined && cy !== undefined && radius !== undefined) {
             return { type: 'CIRCLE', cx, cy, radius };
         }
         return null;
     }
-    
+
     /**
      * Парсит полилинию из DXF
      * @param {Array} lines - массив строк DXF
@@ -327,11 +611,11 @@ class DXFLoader {
         let i = startIndex + 2;
         let closed = false;
         let currentVertex = {};
-        
+
         while (i < lines.length) {
             const code = lines[i];
             const value = lines[i + 1];
-            
+
             if (code === '0') {
                 if (value === 'VERTEX' || value === 'SEQEND') {
                     if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
@@ -343,20 +627,158 @@ class DXFLoader {
                     break;
                 }
             }
-            
+
             if (code === '10') currentVertex.x = parseFloat(value);
             if (code === '20') currentVertex.y = parseFloat(value);
             if (code === '70' && parseInt(value, 10) & 1) closed = true;
-            
+
             i += 2;
         }
-        
+
         if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
             vertices.push(currentVertex);
         }
-        
+
         if (vertices.length > 0) {
             return { type: entityType, vertices, closed };
+        }
+        return null;
+    }
+
+    /**
+     * Парсит дугу из DXF
+     * @param {Array} lines - массив строк DXF
+     * @param {number} startIndex - начальный индекс
+     * @returns {{type: string, cx: number, cy: number, radius: number, startAngle: number, endAngle: number}|null}
+     */
+    parseDXFArc(lines, startIndex) {
+        let cx, cy, radius, startAngle, endAngle;
+        let i = startIndex + 2;
+
+        while (i < lines.length) {
+            const code = lines[i];
+            const value = lines[i + 1];
+
+            if (code === '0') break;
+
+            if (code === '10') cx = parseFloat(value);
+            if (code === '20') cy = parseFloat(value);
+            if (code === '40') radius = parseFloat(value);
+            if (code === '50') startAngle = parseFloat(value); // Начальный угол в градусах
+            if (code === '51') endAngle = parseFloat(value);   // Конечный угол в градусах
+
+            i += 2;
+        }
+
+        if (cx !== undefined && cy !== undefined && radius !== undefined &&
+            startAngle !== undefined && endAngle !== undefined) {
+            return { type: 'ARC', cx, cy, radius, startAngle, endAngle };
+        }
+        return null;
+    }
+
+    /**
+     * Парсит эллипс из DXF
+     * @param {Array} lines - массив строк DXF
+     * @param {number} startIndex - начальный индекс
+     * @returns {{type: string, centerX: number, centerY: number, majorAxisLength: number, minorAxisLength: number, rotation: number}|null}
+     */
+    parseDXFEllipse(lines, startIndex) {
+        let centerX, centerY, majorAxisX, majorAxisY, ratio, startParam, endParam;
+        let i = startIndex + 2;
+
+        while (i < lines.length) {
+            const code = lines[i];
+            const value = lines[i + 1];
+
+            if (code === '0') break;
+
+            if (code === '10') centerX = parseFloat(value);
+            if (code === '20') centerY = parseFloat(value);
+            if (code === '11') majorAxisX = parseFloat(value);
+            if (code === '21') majorAxisY = parseFloat(value);
+            if (code === '40') ratio = parseFloat(value); // Отношение малой оси к большой
+            if (code === '41') startParam = parseFloat(value);
+            if (code === '42') endParam = parseFloat(value);
+
+            i += 2;
+        }
+
+        if (centerX !== undefined && centerY !== undefined &&
+            majorAxisX !== undefined && majorAxisY !== undefined && ratio !== undefined) {
+            const majorAxisLength = Math.sqrt(majorAxisX * majorAxisX + majorAxisY * majorAxisY);
+            const minorAxisLength = majorAxisLength * ratio;
+            const rotation = Math.atan2(majorAxisY, majorAxisX);
+
+            return {
+                type: 'ELLIPSE',
+                centerX,
+                centerY,
+                majorAxisLength,
+                minorAxisLength,
+                rotation,
+                startParam: startParam || 0,
+                endParam: endParam || 2 * Math.PI
+            };
+        }
+        return null;
+    }
+
+    /**
+     * Парсит сплайн из DXF
+     * @param {Array} lines - массив строк DXF
+     * @param {number} startIndex - начальный индекс
+     * @returns {{type: string, controlPoints: Array, closed: boolean}|null}
+     */
+    parseDXFSpline(lines, startIndex) {
+        const controlPoints = [];
+        let i = startIndex + 2;
+        let closed = false;
+        let currentPoint = {};
+        let inControlPoints = false;
+
+        while (i < lines.length) {
+            const code = lines[i];
+            const value = lines[i + 1];
+
+            if (code === '0') {
+                if (value === 'SPLINE') {
+                    // Начало нового сплайна или продолжение
+                    if (currentPoint.x !== undefined && currentPoint.y !== undefined) {
+                        controlPoints.push({ ...currentPoint });
+                        currentPoint = {};
+                    }
+                } else if (value === 'ENDSEC' || value === 'LINE' || value === 'CIRCLE' ||
+                    value === 'ARC' || value === 'POLYLINE' || value === 'LWPOLYLINE' ||
+                    value === 'ELLIPSE') {
+                    break;
+                }
+            }
+
+            if (code === '10') {
+                if (currentPoint.x !== undefined && currentPoint.y !== undefined) {
+                    controlPoints.push({ ...currentPoint });
+                }
+                currentPoint = { x: parseFloat(value) };
+                inControlPoints = true;
+            }
+            if (code === '20' && inControlPoints) {
+                currentPoint.y = parseFloat(value);
+            }
+            if (code === '70') {
+                const flags = parseInt(value, 10);
+                closed = (flags & 1) !== 0; // Бит 0 = закрытый сплайн
+            }
+
+            i += 2;
+        }
+
+        if (currentPoint.x !== undefined && currentPoint.y !== undefined) {
+            controlPoints.push(currentPoint);
+        }
+
+        if (controlPoints.length > 0) {
+            return { type: 'SPLINE', controlPoints, closed };
         }
         return null;
     }
