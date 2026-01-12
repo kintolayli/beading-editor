@@ -5,8 +5,8 @@
     "main": "electron-main.js",
     "scripts": {
         "start": "electron .",
-        "build": "electron-packager . BeadingPatternEditor --platform=win32 --arch=x64 --overwrite",
-        "build-all": "electron-packager . BeadingPatternEditor --platform=all --arch=x64 --overwrite"
+        "build": "electron-packager . BeadingPatternEditor --platform=win32 --arch=x64 --overwrite --out=dist --no-prune",
+        "build-all": "electron-packager . BeadingPatternEditor --platform=all --arch=x64 --overwrite --out=dist"
     },
     "keywords": [
         "beading",
@@ -18,6 +18,6 @@
     "license": "MIT",
     "devDependencies": {
         "electron": "^28.0.0",
-        "electron-packager": "^17.1.1"
+        "electron-packager": "^17.1.2"
     }
 }

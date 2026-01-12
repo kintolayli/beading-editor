@@ -146,7 +146,8 @@ npm run build
 
 ### Подробная инструкция
 
-См. файл [ELECTRON_SETUP.md](ELECTRON_SETUP.md) для детальных инструкций по сборке и настройке.
+- **Для Windows:** См. файл [BUILD_WINDOWS.md](BUILD_WINDOWS.md) - подробная инструкция по сборке на Windows
+- **Для других платформ:** См. файл [ELECTRON_SETUP.md](ELECTRON_SETUP.md) для детальных инструкций
 
 ### Важные моменты:
 
