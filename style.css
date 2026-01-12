@@ -141,12 +141,6 @@ h1 {
     position: relative;
 }
 
-.canvas-container::after {
-    content: '';
-    display: block;
-    padding-bottom: 100%;
-}
-
 #canvas {
     position: absolute;
     top: 50%;

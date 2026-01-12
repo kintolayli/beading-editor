@@ -49,14 +49,13 @@ class PixelGridDemo {
         const containerHeight = container.clientHeight;
 
         const aspectRatio = this.workspaceWidthMM / this.workspaceHeightMM || 1;
-        const maxWidth = Math.min(containerWidth, this.CANVAS_PIXEL_SIZE);
-        const maxHeight = Math.min(containerHeight, this.CANVAS_PIXEL_SIZE);
-
-        let width = maxWidth;
+        
+        // Используем весь доступный контейнер, сохраняя пропорции рабочей области
+        let width = containerWidth;
         let height = width / aspectRatio;
 
-        if (height > maxHeight) {
-            height = maxHeight;
+        if (height > containerHeight) {
+            height = containerHeight;
             width = height * aspectRatio;
         }
 
@@ -763,10 +762,7 @@ class PixelGridDemo {
         };
         
         // Обработчики для текстового поля ширины
-        widthInput.addEventListener('input', () => {
-            updateWidth(parseFloat(widthInput.value));
-        });
-        
+        // Убрали 'input' - валидация только при потере фокуса или Enter
         widthInput.addEventListener('blur', () => {
             updateWidth(parseFloat(widthInput.value));
         });
@@ -783,10 +779,7 @@ class PixelGridDemo {
         });
         
         // Обработчики для текстового поля высоты
-        heightInput.addEventListener('input', () => {
-            updateHeight(parseFloat(heightInput.value));
-        });
-        
+        // Убрали 'input' - валидация только при потере фокуса или Enter
         heightInput.addEventListener('blur', () => {
             updateHeight(parseFloat(heightInput.value));
         });
@@ -803,10 +796,7 @@ class PixelGridDemo {
         });
         
         // Обработчики для размеров рабочей области
-        workspaceWidthInput.addEventListener('input', () => {
-            updateWorkspaceWidth(parseFloat(workspaceWidthInput.value));
-        });
-
+        // Убрали 'input' - валидация только при потере фокуса или Enter
         workspaceWidthInput.addEventListener('blur', () => {
             updateWorkspaceWidth(parseFloat(workspaceWidthInput.value));
         });
@@ -815,10 +805,6 @@ class PixelGridDemo {
             if (e.key === 'Enter') {
                 workspaceWidthInput.blur();
             }
-        });
-
-        workspaceHeightInput.addEventListener('input', () => {
-            updateWorkspaceHeight(parseFloat(workspaceHeightInput.value));
         });
 
         workspaceHeightInput.addEventListener('blur', () => {
