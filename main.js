@@ -11,8 +11,8 @@ class PixelGridDemo {
         this.pixelWidthMM = 3.125;
         this.pixelHeightMM = 3.125;
 
-        // Тип сетки ('square', 'peyote', 'brick')
-        this.gridType = 'square';
+        // Тип сетки ('peyote', 'brick')
+        this.gridType = 'peyote';
         
         // Смещение сетки в мм
         this.gridOffsetX = 0;
