@@ -45,6 +45,7 @@ class CanvasRenderer {
             gridOffsetX = 0,
             gridOffsetY = 0,
             hoveredRow = null,
+            hoveredBead = null,
             fillThreshold = 0.75
         } = renderData;
         
@@ -95,6 +96,22 @@ class CanvasRenderer {
                 gridOffsetX,
                 gridOffsetY,
                 hoveredRow
+            });
+        }
+        
+        // Выделение конкретной бисеринки при наведении
+        if (hoveredBead !== null) {
+            this.highlightBead({
+                pixelWidthPx,
+                pixelHeightPx,
+                canvasWidth,
+                canvasHeight,
+                workspaceWidthMM,
+                workspaceHeightMM,
+                gridType,
+                gridOffsetX,
+                gridOffsetY,
+                hoveredBead
             });
         }
         
@@ -379,6 +396,71 @@ class CanvasRenderer {
             ctx.fillRect(startX, startY, endX - startX, pixelHeightPx);
             ctx.strokeRect(startX, startY, endX - startX, pixelHeightPx);
         }
+        
+        ctx.restore();
+    }
+    
+    /**
+     * Выделяет конкретную бисеринку при наведении мыши
+     * @param {Object} params - параметры отрисовки
+     */
+    highlightBead(params) {
+        const {
+            pixelWidthPx,
+            pixelHeightPx,
+            canvasWidth,
+            canvasHeight,
+            workspaceWidthMM,
+            workspaceHeightMM,
+            gridType,
+            gridOffsetX,
+            gridOffsetY,
+            hoveredBead
+        } = params;
+        
+        if (!hoveredBead) return;
+        
+        const { row, col, isFilled } = hoveredBead;
+        
+        const ctx = this.ctx;
+        ctx.save();
+        
+        // Преобразуем смещение из мм в пиксели
+        const gridOffsetPxX = (gridOffsetX / workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (gridOffsetY / workspaceHeightMM) * canvasHeight;
+        
+        // Вычисляем позицию бисеринки с учётом смещения сетки
+        let x, y;
+        if (gridType === 'peyote') {
+            const offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+            x = col * pixelWidthPx + gridOffsetPxX;
+            y = row * pixelHeightPx + offsetPxY + gridOffsetPxY;
+        } else {
+            const offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+            x = col * pixelWidthPx + offsetPxX + gridOffsetPxX;
+            y = row * pixelHeightPx + gridOffsetPxY;
+        }
+        
+        // Размер скругления
+        const cornerRadius = Math.min(pixelWidthPx, pixelHeightPx) * 0.2;
+        const padding = 2;
+        
+        // Рисуем выделение бисеринки
+        ctx.strokeStyle = isFilled ? '#ffffff' : '#ff6b6b';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = isFilled ? '#ffffff' : '#ff6b6b';
+        ctx.shadowBlur = 8;
+        
+        // Скруглённый прямоугольник
+        ctx.beginPath();
+        ctx.roundRect(
+            x + padding,
+            y + padding,
+            pixelWidthPx - padding * 2,
+            pixelHeightPx - padding * 2,
+            cornerRadius
+        );
+        ctx.stroke();
         
         ctx.restore();
     }

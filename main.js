@@ -47,6 +47,7 @@ class PixelGridDemo {
 
         // Состояние для оверлея рядов
         this.hoveredRow = null; // Для peyote - номер столбца, для brick - номер строки
+        this.hoveredBead = null; // Конкретная бисеринка { row, col, isFilled }
         this.mouseX = null;
         this.mouseY = null;
 
@@ -160,36 +161,118 @@ class PixelGridDemo {
         const gridOffsetPxY = (this.gridOffsetY / this.workspaceHeightMM) * canvasHeight;
 
         let rowIndex = null;
+        let beadRow = null;
+        let beadCol = null;
 
         if (this.gridType === 'peyote') {
             // Для peyote определяем столбец (вертикальный ряд)
             const adjustedX = x - gridOffsetPxX;
             const col = Math.floor(adjustedX / pixelWidthPx);
 
-            // Учитываем смещение peyote
+            // Учитываем смещение peyote для определения строки
+            const offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+            const adjustedY = y - gridOffsetPxY - offsetPxY;
+            const row = Math.floor(adjustedY / pixelHeightPx);
+
             if (col >= 0 && col < gridWidth) {
                 rowIndex = col;
+                beadCol = col;
+                if (row >= 0 && row < gridHeight) {
+                    beadRow = row;
+                }
             }
         } else if (this.gridType === 'brick') {
             // Для brick определяем строку (горизонтальный ряд)
             const adjustedY = y - gridOffsetPxY;
             const row = Math.floor(adjustedY / pixelHeightPx);
 
-            // Учитываем смещение brick
+            // Учитываем смещение brick для определения столбца
+            const offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+            const adjustedX = x - gridOffsetPxX - offsetPxX;
+            const col = Math.floor(adjustedX / pixelWidthPx);
+
             if (row >= 0 && row < gridHeight) {
                 rowIndex = row;
+                beadRow = row;
+                if (col >= 0 && col < gridWidth) {
+                    beadCol = col;
+                }
             }
         }
 
-        if (this.hoveredRow !== rowIndex) {
+        // Определяем, заполнена ли бисеринка
+        let newHoveredBead = null;
+        if (beadRow !== null && beadCol !== null) {
+            const isFilled = this.isBeadFilled(beadRow, beadCol);
+            newHoveredBead = { row: beadRow, col: beadCol, isFilled };
+        }
+
+        // Проверяем, изменилась ли выбранная бисеринка
+        const beadChanged = !this.hoveredBead || !newHoveredBead ||
+            this.hoveredBead.row !== newHoveredBead?.row ||
+            this.hoveredBead.col !== newHoveredBead?.col;
+
+        if (this.hoveredRow !== rowIndex || beadChanged) {
             this.hoveredRow = rowIndex;
+            this.hoveredBead = newHoveredBead;
             this.render();
         }
         this.updateRowOverlayInfo();
     }
 
+    /**
+     * Проверяет, заполнена ли бисеринка по её координатам в сетке
+     */
+    isBeadFilled(row, col) {
+        if (!this.originalDrawing) return false;
+
+        const gridWidth = Math.max(1, Math.floor(this.workspaceWidthMM / this.pixelWidthMM));
+        const gridHeight = Math.max(1, Math.floor(this.workspaceHeightMM / this.pixelHeightMM));
+
+        const canvasWidth = this.currentCanvasWidth || this.canvas.width;
+        const canvasHeight = this.currentCanvasHeight || this.canvas.height;
+
+        const pixelWidthPx = canvasWidth / gridWidth;
+        const pixelHeightPx = canvasHeight / gridHeight;
+
+        const gridOffsetPxX = (this.gridOffsetX / this.workspaceWidthMM) * canvasWidth;
+        const gridOffsetPxY = (this.gridOffsetY / this.workspaceHeightMM) * canvasHeight;
+
+        // Вычисляем масштаб для файла
+        let scaleX = 1.0;
+        let scaleY = 1.0;
+        let offsetX = 0.0;
+        let offsetY = 0.0;
+
+        if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+            scaleX = this.fileWidthMM / this.workspaceWidthMM;
+            scaleY = this.fileHeightMM / this.workspaceHeightMM;
+            offsetX = (1.0 - scaleX) / 2.0;
+            offsetY = (1.0 - scaleY) / 2.0;
+        }
+
+        // Вычисляем позицию бисеринки с учётом смещения сетки
+        let x, y;
+        if (this.gridType === 'peyote') {
+            const offsetPxY = (col % 2 === 1) ? pixelHeightPx / 2 : 0;
+            x = col * pixelWidthPx + gridOffsetPxX;
+            y = row * pixelHeightPx + offsetPxY + gridOffsetPxY;
+        } else {
+            const offsetPxX = (row % 2 === 1) ? pixelWidthPx / 2 : 0;
+            x = col * pixelWidthPx + offsetPxX + gridOffsetPxX;
+            y = row * pixelHeightPx + gridOffsetPxY;
+        }
+
+        const fillPercentage = this.calculateBeadFillPercentage(
+            x, y, pixelWidthPx, pixelHeightPx, canvasWidth, canvasHeight, scaleX, scaleY, offsetX, offsetY
+        );
+
+        return this.fillThreshold === 0 ? fillPercentage > 0 : fillPercentage >= this.fillThreshold;
+    }
+
     handleMouseLeave() {
         this.hoveredRow = null;
+        this.hoveredBead = null;
         this.mouseX = null;
         this.mouseY = null;
         this.render();
@@ -341,14 +424,23 @@ class PixelGridDemo {
     }
 
     updateRowOverlayInfo() {
-        if (this.hoveredRow === null) {
+        if (this.hoveredRow === null && this.hoveredBead === null) {
             this.hideRowOverlayInfo();
             return;
         }
 
-        const count = this.countBeadsInRow(this.hoveredRow);
+        const count = this.hoveredRow !== null ? this.countBeadsInRow(this.hoveredRow) : 0;
         const rowType = this.gridType === 'peyote' ? 'столбец' : 'строка';
-        const rowNumber = this.hoveredRow + 1; // Нумерация с 1 для пользователя
+        const rowNumber = this.hoveredRow !== null ? this.hoveredRow + 1 : 0;
+
+        // Информация о бисеринке
+        let beadInfo = '';
+        if (this.hoveredBead) {
+            const beadRow = this.hoveredBead.row + 1;
+            const beadCol = this.hoveredBead.col + 1;
+            const status = this.hoveredBead.isFilled ? '●' : '○';
+            beadInfo = `<div class="row-overlay-bead">${status} Бисеринка [${beadCol}, ${beadRow}]</div>`;
+        }
 
         const overlay = document.getElementById('rowOverlayInfo');
         if (overlay) {
@@ -356,6 +448,7 @@ class PixelGridDemo {
                 <div class="row-overlay-content">
                     <div class="row-overlay-title">${rowType.toUpperCase()} ${rowNumber}</div>
                     <div class="row-overlay-count">${count} бисеринок</div>
+                    ${beadInfo}
                 </div>
             `;
             overlay.style.display = 'block';
@@ -744,6 +837,7 @@ class PixelGridDemo {
             gridOffsetX: this.gridOffsetX,
             gridOffsetY: this.gridOffsetY,
             hoveredRow: this.hoveredRow,
+            hoveredBead: this.hoveredBead,
             fillThreshold: this.fillThreshold
         });
 
