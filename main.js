@@ -111,36 +111,27 @@ class PixelGridDemo {
      */
     async loadDefaultFile() {
         try {
-            console.log('Попытка загрузить Sketch_base.dxf...');
             this.isAutoLoading = true; // Флаг для подавления alert при автозагрузке
 
             const response = await fetch('./Sketch_base.dxf');
 
             if (!response.ok) {
-                console.warn(`Файл Sketch_base.dxf не найден (статус: ${response.status}), используется пустая рабочая область`);
                 this.isAutoLoading = false;
                 return;
             }
 
-            console.log('Файл найден, загружаю...');
             const blob = await response.blob();
-            console.log('Blob создан, размер:', blob.size, 'байт');
 
             if (blob.size === 0) {
-                console.warn('Файл пустой');
                 this.isAutoLoading = false;
                 return;
             }
 
             const file = new File([blob], 'Sketch_base.dxf', { type: 'application/dxf' });
-            console.log('File объект создан, передаю в handleFileUpload...');
-
             await this.handleFileUpload(file, 'dxf');
-            console.log('Файл Sketch_base.dxf успешно загружен и обработан');
             this.isAutoLoading = false;
         } catch (error) {
             console.error('Ошибка при загрузке файла по умолчанию:', error);
-            console.error('Детали ошибки:', error.message, error.stack);
             this.isAutoLoading = false;
         }
     }
@@ -805,7 +796,7 @@ class PixelGridDemo {
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
 
-            console.log('Проект успешно сохранен:', cleanFileName);
+            // Проект успешно сохранен
         } catch (error) {
             console.error('Ошибка при сохранении проекта:', error);
             alert('Ошибка при сохранении проекта: ' + error.message);
@@ -891,7 +882,7 @@ class PixelGridDemo {
             this.updateUI();
             this.render();
 
-            console.log('Проект успешно загружен');
+            // Проект успешно загружен
         } catch (error) {
             console.error('Ошибка при загрузке проекта:', error);
             alert('Ошибка при загрузке проекта: ' + error.message);

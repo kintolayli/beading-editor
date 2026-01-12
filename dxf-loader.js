@@ -23,18 +23,10 @@ class DXFLoader {
             throw new Error('DXF не содержит графических объектов');
         }
 
-        // Отладочный вывод
-        console.log('DXF entities:', dxfData.entities.length);
-        dxfData.entities.forEach((e, i) => {
-            console.log(`  Entity ${i}: ${e.type}`, e);
-        });
-
         // Находим bounding box всех объектов
         const bbox = this.calculateBoundingBox(dxfData.entities);
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
-
-        console.log('Bounding box:', bbox, 'Size:', width, 'x', height);
 
         if (width === 0 || height === 0) {
             throw new Error('Некорректные размеры объектов в DXF');
@@ -42,7 +34,6 @@ class DXFLoader {
 
         // Создаём контур
         const contour = this.extractContour(dxfData.entities, bbox);
-        console.log('Contour points:', contour.length);
 
         // Создаём растровое представление и функцию проверки заполнения
         const drawingFunction = this.createDrawingFunction(dxfData.entities, bbox);
