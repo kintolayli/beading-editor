@@ -230,19 +230,22 @@ class PixelGridDemo {
                 let fileY = workspaceY;
 
                 if (this.hasLoadedFile && this.fileWidthMM && this.fileHeightMM) {
+                    // Преобразуем координаты рабочей области в координаты файла
                     fileX = (workspaceX - offsetX) / scaleX;
                     fileY = (workspaceY - offsetY) / scaleY;
 
-                    // Пропускаем точки вне файла
-                    if (fileX < 0 || fileX > 1 || fileY < 0 || fileY > 1) {
-                        continue;
-                    }
+                    // НЕ пропускаем точки вне файла - originalDrawing сам обработает масштабирование
+                    // При масштабировании > 1 координаты могут выходить за [0, 1], но originalDrawing
+                    // правильно преобразует их обратно к исходному масштабу
                 }
 
                 totalPoints++;
 
-                // Проверяем, заполнена ли точка
-                if (this.originalDrawing(fileX, fileY)) {
+                // Проверяем, заполнена ли точка (используем координаты файла)
+                // originalDrawing сам обработает масштабирование и вернет false для точек вне исходной формы
+                const isFilled = this.originalDrawing(fileX, fileY);
+
+                if (isFilled) {
                     filledPoints++;
                 }
             }
@@ -448,21 +451,29 @@ class PixelGridDemo {
 
         // Создаём масштабированную функцию рисунка
         const originalFunc = this.originalDrawingFunction;
-        this.originalDrawing = (normalizedX, normalizedY) => {
-            // Преобразуем координаты обратно к исходному масштабу
-            const dx = normalizedX - centerX;
-            const dy = normalizedY - centerY;
-            const origX = centerX + dx / this.scale;
-            const origY = centerY + dy / this.scale;
+        const currentScale = this.scale || 1.0; // Захватываем текущий масштаб
 
-            // Проверяем границы исходного файла [0, 1]
-            // Если координаты вне границ, возвращаем false (точка вне исходной формы)
-            if (origX < 0 || origX > 1 || origY < 0 || origY > 1) {
-                return false;
-            }
+        // Для масштаба 1.0 используем исходную функцию напрямую (без преобразования)
+        if (Math.abs(currentScale - 1.0) < 0.0001) {
+            this.originalDrawing = originalFunc;
+        } else {
+            // Для других масштабов преобразуем координаты
+            this.originalDrawing = (normalizedX, normalizedY) => {
+                // Преобразуем координаты обратно к исходному масштабу
+                const dx = normalizedX - centerX;
+                const dy = normalizedY - centerY;
+                const origX = centerX + dx / currentScale;
+                const origY = centerY + dy / currentScale;
 
-            return originalFunc(origX, origY);
-        };
+                // Проверяем границы исходного файла [0, 1]
+                // Если координаты вне границ, возвращаем false (точка вне исходной формы)
+                if (origX < 0 || origX > 1 || origY < 0 || origY > 1) {
+                    return false;
+                }
+
+                return originalFunc(origX, origY);
+            };
+        }
     }
 
     async handleFileUpload(file, extension) {
