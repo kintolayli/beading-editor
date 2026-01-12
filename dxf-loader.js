@@ -25,11 +25,18 @@ class DXFLoader {
 
         // Находим bounding box всех объектов
         const bbox = this.calculateBoundingBox(dxfData.entities);
+        
+        // Проверяем на Infinity и NaN
+        if (!isFinite(bbox.minX) || !isFinite(bbox.minY) || 
+            !isFinite(bbox.maxX) || !isFinite(bbox.maxY)) {
+            throw new Error('Некорректные размеры объектов в DXF (Infinity или NaN)');
+        }
+        
         const width = bbox.maxX - bbox.minX;
         const height = bbox.maxY - bbox.minY;
 
-        if (width === 0 || height === 0) {
-            throw new Error('Некорректные размеры объектов в DXF');
+        if (width <= 0 || height <= 0 || !isFinite(width) || !isFinite(height)) {
+            throw new Error('Некорректные размеры объектов в DXF (ширина или высота <= 0)');
         }
 
         // Создаём контур
@@ -53,50 +60,100 @@ class DXFLoader {
      */
     calculateBoundingBox(entities) {
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        let hasValidEntity = false;
 
         entities.forEach(entity => {
             if (entity.type === 'LINE') {
-                minX = Math.min(minX, entity.x1, entity.x2);
-                minY = Math.min(minY, entity.y1, entity.y2);
-                maxX = Math.max(maxX, entity.x1, entity.x2);
-                maxY = Math.max(maxY, entity.y1, entity.y2);
+                if (entity.x1 !== undefined && entity.y1 !== undefined && 
+                    entity.x2 !== undefined && entity.y2 !== undefined &&
+                    isFinite(entity.x1) && isFinite(entity.y1) &&
+                    isFinite(entity.x2) && isFinite(entity.y2)) {
+                    minX = Math.min(minX, entity.x1, entity.x2);
+                    minY = Math.min(minY, entity.y1, entity.y2);
+                    maxX = Math.max(maxX, entity.x1, entity.x2);
+                    maxY = Math.max(maxY, entity.y1, entity.y2);
+                    hasValidEntity = true;
+                }
             } else if (entity.type === 'CIRCLE') {
-                minX = Math.min(minX, entity.cx - entity.radius);
-                minY = Math.min(minY, entity.cy - entity.radius);
-                maxX = Math.max(maxX, entity.cx + entity.radius);
-                maxY = Math.max(maxY, entity.cy + entity.radius);
+                if (entity.cx !== undefined && entity.cy !== undefined && 
+                    entity.radius !== undefined &&
+                    isFinite(entity.cx) && isFinite(entity.cy) && isFinite(entity.radius)) {
+                    minX = Math.min(minX, entity.cx - entity.radius);
+                    minY = Math.min(minY, entity.cy - entity.radius);
+                    maxX = Math.max(maxX, entity.cx + entity.radius);
+                    maxY = Math.max(maxY, entity.cy + entity.radius);
+                    hasValidEntity = true;
+                }
             } else if (entity.type === 'ARC') {
-                // Вычисляем bounding box для дуги
-                const arcBbox = this.calculateArcBoundingBox(entity);
-                minX = Math.min(minX, arcBbox.minX);
-                minY = Math.min(minY, arcBbox.minY);
-                maxX = Math.max(maxX, arcBbox.maxX);
-                maxY = Math.max(maxY, arcBbox.maxY);
+                // Проверяем, что дуга имеет валидные параметры
+                if (entity.cx !== undefined && entity.cy !== undefined && 
+                    entity.radius !== undefined && entity.startAngle !== undefined && 
+                    entity.endAngle !== undefined &&
+                    isFinite(entity.cx) && isFinite(entity.cy) && 
+                    isFinite(entity.radius) && isFinite(entity.startAngle) && 
+                    isFinite(entity.endAngle) && entity.radius > 0) {
+                    // Вычисляем bounding box для дуги
+                    const arcBbox = this.calculateArcBoundingBox(entity);
+                    if (isFinite(arcBbox.minX) && isFinite(arcBbox.minY) && 
+                        isFinite(arcBbox.maxX) && isFinite(arcBbox.maxY)) {
+                        minX = Math.min(minX, arcBbox.minX);
+                        minY = Math.min(minY, arcBbox.minY);
+                        maxX = Math.max(maxX, arcBbox.maxX);
+                        maxY = Math.max(maxY, arcBbox.maxY);
+                        hasValidEntity = true;
+                    }
+                }
             } else if (entity.type === 'POLYLINE' || entity.type === 'LWPOLYLINE') {
-                entity.vertices.forEach(v => {
-                    minX = Math.min(minX, v.x);
-                    minY = Math.min(minY, v.y);
-                    maxX = Math.max(maxX, v.x);
-                    maxY = Math.max(maxY, v.y);
-                });
+                if (entity.vertices && entity.vertices.length > 0) {
+                    entity.vertices.forEach(v => {
+                        if (v.x !== undefined && v.y !== undefined && 
+                            isFinite(v.x) && isFinite(v.y)) {
+                            minX = Math.min(minX, v.x);
+                            minY = Math.min(minY, v.y);
+                            maxX = Math.max(maxX, v.x);
+                            maxY = Math.max(maxY, v.y);
+                            hasValidEntity = true;
+                        }
+                    });
+                }
             } else if (entity.type === 'ELLIPSE') {
                 // Упрощенный bounding box для эллипса
-                minX = Math.min(minX, entity.centerX - entity.majorAxisLength);
-                minY = Math.min(minY, entity.centerY - entity.majorAxisLength);
-                maxX = Math.max(maxX, entity.centerX + entity.majorAxisLength);
-                maxY = Math.max(maxY, entity.centerY + entity.majorAxisLength);
+                if (entity.centerX !== undefined && entity.centerY !== undefined && 
+                    entity.majorAxisLength !== undefined &&
+                    isFinite(entity.centerX) && isFinite(entity.centerY) && 
+                    isFinite(entity.majorAxisLength)) {
+                    minX = Math.min(minX, entity.centerX - entity.majorAxisLength);
+                    minY = Math.min(minY, entity.centerY - entity.majorAxisLength);
+                    maxX = Math.max(maxX, entity.centerX + entity.majorAxisLength);
+                    maxY = Math.max(maxY, entity.centerY + entity.majorAxisLength);
+                    hasValidEntity = true;
+                }
             } else if (entity.type === 'SPLINE') {
                 // Bounding box для сплайна по контрольным точкам
                 if (entity.controlPoints && entity.controlPoints.length > 0) {
                     entity.controlPoints.forEach(p => {
-                        minX = Math.min(minX, p.x);
-                        minY = Math.min(minY, p.y);
-                        maxX = Math.max(maxX, p.x);
-                        maxY = Math.max(maxY, p.y);
+                        if (p.x !== undefined && p.y !== undefined && 
+                            isFinite(p.x) && isFinite(p.y)) {
+                            minX = Math.min(minX, p.x);
+                            minY = Math.min(minY, p.y);
+                            maxX = Math.max(maxX, p.x);
+                            maxY = Math.max(maxY, p.y);
+                            hasValidEntity = true;
+                        }
                     });
                 }
             }
         });
+
+        // Если не нашли валидных объектов, выбрасываем ошибку
+        if (!hasValidEntity) {
+            throw new Error('DXF не содержит валидных графических объектов');
+        }
+
+        // Если все еще Infinity, значит что-то пошло не так
+        if (minX === Infinity || minY === Infinity || maxX === -Infinity || maxY === -Infinity) {
+            throw new Error('Не удалось вычислить размеры объектов в DXF');
+        }
 
         return { minX, minY, maxX, maxY };
     }
@@ -248,21 +305,37 @@ class DXFLoader {
      */
     generateArcPoints(arc, steps) {
         const points = [];
-        const startRad = (arc.startAngle * Math.PI) / 180;
-        const endRad = (arc.endAngle * Math.PI) / 180;
+        let startRad = (arc.startAngle * Math.PI) / 180;
+        let endRad = (arc.endAngle * Math.PI) / 180;
+
+        // Нормализуем углы в диапазон [0, 2*PI]
+        startRad = startRad % (2 * Math.PI);
+        if (startRad < 0) startRad += 2 * Math.PI;
+        endRad = endRad % (2 * Math.PI);
+        if (endRad < 0) endRad += 2 * Math.PI;
 
         // Вычисляем длину дуги (против часовой стрелки)
         let arcLength = endRad - startRad;
         if (arcLength < 0) arcLength += 2 * Math.PI;
+        
+        // Если дуга очень маленькая или нулевая, делаем минимальную длину
+        if (arcLength < 0.001) {
+            arcLength = 2 * Math.PI; // Полная окружность
+        }
 
         const numSteps = Math.max(steps, Math.floor(arcLength * 30 / (2 * Math.PI)));
+        
+        // Минимум 2 точки для любой дуги
+        const actualSteps = Math.max(2, numSteps);
 
-        for (let i = 0; i <= numSteps; i++) {
-            const t = i / numSteps;
+        for (let i = 0; i <= actualSteps; i++) {
+            const t = i / actualSteps;
             const angle = startRad + t * arcLength;
             const x = arc.cx + arc.radius * Math.cos(angle);
             const y = arc.cy + arc.radius * Math.sin(angle);
-            points.push({ x, y });
+            if (isFinite(x) && isFinite(y)) {
+                points.push({ x, y });
+            }
         }
 
         return points;
@@ -609,31 +682,74 @@ class DXFLoader {
         let closed = false;
         let currentVertex = {};
 
-        while (i < lines.length) {
-            const code = lines[i];
-            const value = lines[i + 1];
+        // LWPOLYLINE имеет другой формат - координаты идут парами 10/20 без VERTEX объектов
+        if (entityType === 'LWPOLYLINE') {
+            while (i < lines.length) {
+                const code = lines[i];
+                const value = lines[i + 1];
 
-            if (code === '0') {
-                if (value === 'VERTEX' || value === 'SEQEND') {
+                if (code === '0') {
+                    // Конец текущей сущности
                     if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
                         vertices.push({ ...currentVertex });
                         currentVertex = {};
                     }
-                    if (value === 'SEQEND') break;
-                } else {
                     break;
                 }
+
+                if (code === '10') {
+                    // Если уже есть вершина с координатами, сохраняем её
+                    if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+                        vertices.push({ ...currentVertex });
+                    }
+                    currentVertex = { x: parseFloat(value) };
+                }
+                if (code === '20' && currentVertex.x !== undefined) {
+                    currentVertex.y = parseFloat(value);
+                    // Сохраняем вершину после получения Y
+                    vertices.push({ ...currentVertex });
+                    currentVertex = {};
+                }
+                if (code === '70') {
+                    const flags = parseInt(value, 10);
+                    closed = (flags & 1) !== 0; // Бит 0 = закрытая полилиния
+                }
+
+                i += 2;
             }
 
-            if (code === '10') currentVertex.x = parseFloat(value);
-            if (code === '20') currentVertex.y = parseFloat(value);
-            if (code === '70' && parseInt(value, 10) & 1) closed = true;
+            // Сохраняем последнюю вершину, если она есть
+            if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+                vertices.push(currentVertex);
+            }
+        } else {
+            // POLYLINE - старый формат с VERTEX объектами
+            while (i < lines.length) {
+                const code = lines[i];
+                const value = lines[i + 1];
 
-            i += 2;
-        }
+                if (code === '0') {
+                    if (value === 'VERTEX' || value === 'SEQEND') {
+                        if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+                            vertices.push({ ...currentVertex });
+                            currentVertex = {};
+                        }
+                        if (value === 'SEQEND') break;
+                    } else {
+                        break;
+                    }
+                }
 
-        if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
-            vertices.push(currentVertex);
+                if (code === '10') currentVertex.x = parseFloat(value);
+                if (code === '20') currentVertex.y = parseFloat(value);
+                if (code === '70' && parseInt(value, 10) & 1) closed = true;
+
+                i += 2;
+            }
+
+            if (currentVertex.x !== undefined && currentVertex.y !== undefined) {
+                vertices.push(currentVertex);
+            }
         }
 
         if (vertices.length > 0) {
