@@ -54,8 +54,8 @@ body::before {
 
 .sidebar-header {
     text-align: center;
-    padding: 1rem 0;
-    margin-bottom: 0.5rem;
+    padding: 0 0 1rem 0;
+    margin-bottom: 1rem;
     border-bottom: 1px solid rgba(0, 255, 157, 0.1);
     opacity: 0;
     animation: fadeInDown 0.8s ease-out forwards;
@@ -185,14 +185,20 @@ h1 {
 .controls-inner {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: 1rem;
 }
 
 .control-group {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
 }
 
 .slider-section {
+    background: rgba(0, 255, 157, 0.05);
+    border: 1px solid rgba(0, 255, 157, 0.15);
+    border-radius: 6px;
+    padding: 0.75rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -305,7 +311,7 @@ input[type="range"]::-moz-range-track {
     background: rgba(0, 212, 255, 0.05);
     border: 1px solid rgba(0, 212, 255, 0.15);
     border-radius: 6px;
-    padding: 0.6rem;
+    padding: 0.75rem;
 }
 
 .grid-type-buttons {
@@ -355,7 +361,7 @@ input[type="range"]::-moz-range-track {
     background: rgba(255, 200, 100, 0.05);
     border: 1px solid rgba(255, 200, 100, 0.15);
     border-radius: 6px;
-    padding: 0.6rem;
+    padding: 0.75rem;
 }
 
 .offset-controls {
@@ -383,14 +389,14 @@ input[type="range"]::-moz-range-track {
     background: rgba(0, 255, 157, 0.05);
     border: 1px solid rgba(0, 255, 157, 0.15);
     border-radius: 6px;
-    padding: 0.6rem;
+    padding: 0.75rem;
 }
 
 .scale-section {
     background: rgba(0, 212, 255, 0.05);
     border: 1px solid rgba(0, 212, 255, 0.15);
     border-radius: 6px;
-    padding: 0.6rem;
+    padding: 0.75rem;
 }
 
 .scale-section .slider-labels {
@@ -405,14 +411,21 @@ input[type="range"]::-moz-range-track {
 }
 
 .upload-section {
-    text-align: center;
+    background: rgba(0, 212, 255, 0.05);
+    border: 1px solid rgba(0, 212, 255, 0.15);
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
 }
 
 .upload-button {
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    justify-content: center;
     gap: 0.4rem;
-    padding: 0.6rem 1rem;
+    padding: 0.75rem 1rem;
     background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
     color: var(--bg-primary);
     font-weight: 600;
@@ -423,6 +436,8 @@ input[type="range"]::-moz-range-track {
     text-transform: uppercase;
     letter-spacing: 0.05em;
     box-shadow: 0 2px 8px rgba(0, 255, 157, 0.3);
+    width: 100%;
+    border: none;
 }
 
 .upload-button:hover {
@@ -631,11 +646,10 @@ input[type="range"]::-moz-range-track {
 }
 
 .workspace-section {
-    margin-top: 0.75rem;
     background: rgba(0, 255, 157, 0.05);
-    border: 1px solid rgba(0, 255, 157, 0.12);
+    border: 1px solid rgba(0, 255, 157, 0.15);
     border-radius: 6px;
-    padding: 0.6rem;
+    padding: 0.75rem;
 }
 
 /* Убираем стрелки у number input в Chrome, Safari, Edge */
