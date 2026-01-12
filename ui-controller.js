@@ -283,7 +283,7 @@ class UIController {
         } = data;
         
         document.getElementById('pixelDimensionsDisplay').textContent = 
-            `${pixelWidthMM.toFixed(3)} × ${pixelHeightMM.toFixed(3)} мм`;
+            `${pixelWidthMM.toFixed(1)} × ${pixelHeightMM.toFixed(1)} мм`;
         document.getElementById('gridSize').textContent = `${gridWidth}×${gridHeight}`;
         document.getElementById('totalPixels').textContent = filledBeads.toLocaleString('ru-RU');
         document.getElementById('workspaceSize').textContent = 
@@ -296,8 +296,8 @@ class UIController {
      * @param {number} height - высота пикселя
      */
     updatePixelInputs(width, height) {
-        this.widthInput.value = width.toFixed(3);
-        this.heightInput.value = height.toFixed(3);
+        this.widthInput.value = width.toFixed(1);
+        this.heightInput.value = height.toFixed(1);
         
         if (width >= parseFloat(this.widthSlider.min) && width <= parseFloat(this.widthSlider.max)) {
             this.widthSlider.value = width;

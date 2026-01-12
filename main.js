@@ -8,8 +8,8 @@ class PixelGridDemo {
         this.workspaceHeightMM = 150; // Высота рабочей области в мм
 
         // Начальные размеры пикселя в мм
-        this.pixelWidthMM = 3.125;
-        this.pixelHeightMM = 3.125;
+        this.pixelWidthMM = 3.1;
+        this.pixelHeightMM = 3.1;
 
         // Тип сетки ('peyote', 'brick')
         this.gridType = 'peyote';
@@ -823,8 +823,8 @@ class PixelGridDemo {
             // Восстанавливаем настройки
             this.workspaceWidthMM = projectData.workspaceWidthMM || 150;
             this.workspaceHeightMM = projectData.workspaceHeightMM || 150;
-            this.pixelWidthMM = projectData.pixelWidthMM || 3.125;
-            this.pixelHeightMM = projectData.pixelHeightMM || 3.125;
+            this.pixelWidthMM = projectData.pixelWidthMM || 3.1;
+            this.pixelHeightMM = projectData.pixelHeightMM || 3.1;
             this.gridType = projectData.gridType || 'peyote';
             this.gridOffsetX = projectData.gridOffsetX || 0;
             this.gridOffsetY = projectData.gridOffsetY || 0;
